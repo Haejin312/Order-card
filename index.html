@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Card Generator</title>
+<style>
+:root{--amber:#B8860B;--dark:#2C2110;--body:#4A3522;--cream:#FAF7F0;--cream2:#F0EBE0;--border:#D4C4A0;--red:#C0392B;--green:#27AE60}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:var(--cream);color:var(--dark);font-size:14px}
+header{background:var(--dark);color:var(--cream);padding:14px 28px;display:flex;align-items:center;gap:12px}
+header h1{font-size:1.1rem;font-weight:600;letter-spacing:.05em}
+header span{font-size:.75rem;color:var(--amber)}
+.pbar{display:flex;background:#1a0f06;padding:0 28px;border-bottom:2px solid var(--amber)}
+.stab{padding:11px 18px;font-size:.78rem;color:#888;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap}
+.stab.active{color:var(--amber);border-bottom-color:var(--amber)}
+.stab.done{color:#aaa}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 16px}
+.card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.card h2{font-size:.85rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px;padding-bottom:8px;border-bottom:1px solid var(--cream2)}
+.card h3{font-size:.75rem;font-weight:700;color:var(--body);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 10px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+.f{display:flex;flex-direction:column;gap:4px}
+label{font-size:.7rem;font-weight:700;color:var(--body);text-transform:uppercase;letter-spacing:.04em}
+label .tip{font-size:.65rem;color:#aaa;font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px}
+input[type=text],input[type=number],input[type=date],select{padding:8px 10px;border:1px solid var(--border);border-radius:4px;font-size:.82rem;color:var(--dark);background:var(--cream);transition:border .15s;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--amber);background:#fff}
+input:disabled{opacity:.4;cursor:not-allowed}
+.drow{display:flex;gap:6px;align-items:center}
+.drow input[type=date]{flex:1}
+.nalabel{display:flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;color:#888;text-transform:none;letter-spacing:0;white-space:nowrap;cursor:pointer}
+.nalabel input[type=checkbox]{width:14px;height:14px;cursor:pointer}
+.pogrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+.btn{padding:8px 18px;border:none;border-radius:4px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-amber{background:var(--amber);color:#fff}.btn-amber:hover{background:#9a7009}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--body)}.btn-outline:hover{border-color:var(--amber);color:var(--amber)}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#1e8449}
+.btn-sm{padding:4px 10px;font-size:.72rem}
+.btn-danger{color:var(--red);border-color:var(--red)}.btn-danger:hover{background:var(--red);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.nav{display:flex;justify-content:space-between;margin-top:20px}
+.brow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.78rem;min-width:700px}
+th{background:var(--dark);color:var(--cream);padding:8px 6px;text-align:center;font-size:.7rem;font-weight:600;white-space:nowrap}
+td{padding:4px 3px;border-bottom:1px solid var(--cream2)}
+td input{padding:5px 6px;font-size:.78rem;background:#fff;width:100%;border:1px solid var(--border);border-radius:3px}
+tr:hover td{background:#fffdf5}
+.tfoot-row td{background:var(--cream2);font-weight:700;font-size:.78rem;padding:6px;text-align:right}
+.rg{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:14px}
+.ri{background:var(--cream2);border-radius:4px;padding:7px 10px}
+.ri .rk{font-size:.65rem;color:#888}
+.ri .rv{font-size:.8rem;font-weight:600;margin-top:2px;word-break:break-all}
+.gbox{text-align:center;padding:20px;border:2px dashed var(--border);border-radius:8px;margin-top:16px}
+.gbox p{color:#888;font-size:.82rem;margin-bottom:12px}
+#statusMsg{margin-top:10px;font-size:.82rem;font-weight:600}
+.ok{color:var(--green)}.err{color:var(--red)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.div{border:none;border-top:1px solid var(--cream2);margin:14px 0}
+.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:8px;border-bottom:1px solid var(--cream2)}
+.hdr h2{margin-bottom:0;padding-bottom:0;border-bottom:none}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📋 Order Card Generator</h1>
+    <span>Apparel Links S.A. — Carhartt Account</span>
+  </div>
+</header>
+
+<div class="pbar">
+  <div class="stab active" onclick="goStep(1)" id="tab1">1. 기본정보 (Main)</div>
+  <div class="stab" onclick="goStep(2)" id="tab2">2. 오더 라인</div>
+  <div class="stab" onclick="goStep(3)" id="tab3">3. Style 정보</div>
+  <div class="stab" onclick="goStep(4)" id="tab4">4. 검토 및 생성</div>
+</div>
+
+<div class="wrap">
+
+<!-- STEP 1 -->
+<div id="step1">
+  <div class="card">
+    <div class="hdr">
+      <h2>I. 기본 정보 <small style="font-weight:400;color:#aaa;text-transform:none;font-size:.75rem">(Main 시트)</small></h2>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('recapInput').click()">📂 오더리캡 불러오기</button>
+        <input type="file" id="recapInput" accept=".xlsx,.xls" style="display:none" onchange="loadRecap(this)">
+        <span id="recapStatus" style="font-size:.72rem;font-weight:600"></span>
+      </div>
+    </div>
+
+    <h3>오더 기본</h3>
+    <div class="g3">
+      <div class="f"><label>File No <span class="tip">F6</span></label><input type="text" id="file_no" placeholder="예: 264T001-01" oninput="syncFileNo()"></div>
+      <div class="f"><label>가격 조건 <span class="tip">D7</span></label>
+        <select id="price_terms"><option>FOB</option><option>LDP</option><option>CIF</option><option>EXW</option></select>
+      </div>
+      <div class="f"><label>선염오더 여부 <span class="tip">P5</span></label>
+        <select id="yarn_dye"><option value="No">No</option><option value="Yes">Yes</option></select>
+      </div>
+      <div class="f"><label>Buyer <span class="tip">D6</span></label>
+        <select id="buyer_sel" onchange="handleSel('buyer')">
+          <option value="CARHARTT">CARHARTT</option><option value="KONTOOR">KONTOOR</option><option value="EXPRESS">EXPRESS</option><option value="__">직접 입력</option>
+        </select>
+        <input type="text" id="buyer_txt" placeholder="Buyer 직접 입력" style="display:none;margin-top:4px">
+        <input type="hidden" id="buyer" value="CARHARTT">
+      </div>
+      <div class="f"><label>작지 날짜 <span class="tip">D5</span></label><input type="date" id="order_date"></div>
+    </div>
+
+    <hr class="div">
+    <h3>PO No <span style="font-size:.65rem;color:#aaa;font-weight:400;text-transform:none">(F5 — 1개면 해당 번호, 여러 개면 자동으로 VARIOUS)</span></h3>
+    <div class="pogrid" id="poGrid">
+      <input type="text" class="po-inp" placeholder="PO #1" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #2" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #3" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #4" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #5" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #6" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #7" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #8" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #9" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #10" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #11" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #12" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #13" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #14" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #15" oninput="updatePoNo()">
+      <input type="text" class="po-inp" placeholder="PO #16" oninput="updatePoNo()">
+    </div>
+    <input type="hidden" id="po_no" value="">
+    <div id="po_summary" style="font-size:.75rem;color:var(--amber);margin-top:4px;font-weight:600"></div>
+
+    <hr class="div">
+    <h3>봉제처</h3>
+    <div class="g2">
+      <div class="f"><label>봉제처 1 <span class="tip">H5</span></label>
+        <select id="factory1_sel" onchange="handleSel('factory1')">
+          <option value="APPAREL LINKS,S.A.">APPAREL LINKS,S.A.</option>
+          <option value="INT,S.A.">INT,S.A.</option>
+          <option value="JS INTERNATIONAL,S.A.">JS INTERNATIONAL,S.A.</option>
+          <option value="TEXTYLER,S.A.">TEXTYLER,S.A.</option>
+          <option value="TRINIDAD,S.A.">TRINIDAD,S.A.</option>
+          <option value="AIN GUATEMALA,S.A.">AIN GUATEMALA,S.A.</option>
+          <option value="MODAS WIZ">MODAS WIZ</option>
+          <option value="__">직접 입력</option>
+        </select>
+        <input type="text" id="factory1_txt" placeholder="봉제처1 직접 입력" style="display:none;margin-top:4px">
+        <input type="hidden" id="factory1" value="APPAREL LINKS,S.A.">
+      </div>
+      <div class="f"><label>봉제처 2 <span class="tip">H6 — 없으면 비워두세요</span></label>
+        <select id="factory2_sel" onchange="handleSel('factory2')">
+          <option value="">— 없음 —</option>
+          <option value="APPAREL LINKS,S.A.">APPAREL LINKS,S.A.</option>
+          <option value="INT,S.A.">INT,S.A.</option>
+          <option value="JS INTERNATIONAL,S.A.">JS INTERNATIONAL,S.A.</option>
+          <option value="TEXTYLER,S.A.">TEXTYLER,S.A.</option>
+          <option value="TRINIDAD,S.A.">TRINIDAD,S.A.</option>
+          <option value="AIN GUATEMALA,S.A.">AIN GUATEMALA,S.A.</option>
+          <option value="MODAS WIZ">MODAS WIZ</option>
+          <option value="__">직접 입력</option>
+        </select>
+        <input type="text" id="factory2_txt" placeholder="봉제처2 직접 입력" style="display:none;margin-top:4px">
+        <input type="hidden" id="factory2" value="">
+      </div>
+    </div>
+
+    <hr class="div">
+    <h3>납기</h3>
+    <div class="g2">
+      <div class="f"><label>첫 납기 (1st Delivery) <span class="tip">J5</span></label>
+        <input type="date" id="first_del">
+      </div>
+      <div class="f"><label>마지막 납기 (Last Delivery) <span class="tip">J6</span></label>
+        <div class="drow">
+          <input type="date" id="last_del">
+          <label class="nalabel"><input type="checkbox" id="last_del_na" onchange="toggleDt('last_del','last_del_na')"> 해당없음</label>
+        </div>
+      </div>
+    </div>
+
+    <hr class="div">
+    <h3>원단 납기</h3>
+    <div class="g4">
+      <div class="f"><label>출고 작지일로부터 <span class="tip">N5 — 일수</span></label><input type="number" id="days_after" value="30" min="0"></div>
+      <div class="f"><label>원단납기 (Yarn Dye) <span class="tip">N7</span></label>
+        <div class="drow">
+          <input type="date" id="yarndy_dt" disabled>
+          <label class="nalabel"><input type="checkbox" id="yarndy_na" checked onchange="toggleDt('yarndy_dt','yarndy_na')"> 해당없음</label>
+        </div>
+      </div>
+      <div class="f"><label>원단납기 (외부가공1) <span class="tip">N8</span></label>
+        <div class="drow">
+          <input type="date" id="fin1_dt" disabled>
+          <label class="nalabel"><input type="checkbox" id="fin1_na" checked onchange="toggleDt('fin1_dt','fin1_na')"> 해당없음</label>
+        </div>
+      </div>
+      <div class="f"><label>원단납기 (외부가공2) <span class="tip">N9</span></label>
+        <div class="drow">
+          <input type="date" id="fin2_dt" disabled>
+          <label class="nalabel"><input type="checkbox" id="fin2_na" checked onchange="toggleDt('fin2_dt','fin2_na')"> 해당없음</label>
+        </div>
+      </div>
+    </div>
+
+    <hr class="div">
+    <h3>작성자</h3>
+    <div class="g2">
+      <div class="f"><label>작성자 <span class="tip">L5</span></label><input type="text" id="author"></div>
+      <div class="f"><label>소속 <span class="tip">L6</span></label>
+        <select id="department">
+          <option>영업1팀</option><option>영업2팀</option><option>영업3팀</option>
+          <option selected>영업4팀</option><option>영업5팀</option><option>영업6팀</option><option>영업7팀</option>
+        </select>
+      </div>
+    </div>
+
+    <hr class="div">
+    <h3>회사 정보 <small style="font-weight:400;color:#aaa;text-transform:none">(기본값 자동입력, 필요시 수정)</small></h3>
+    <div class="g2">
+      <div class="f"><label>회사명 <span class="tip">P7</span></label><input type="text" id="company_name" value="Apparel Links, S.A."></div>
+      <div class="f"><label>주소 1 <span class="tip">P8</span></label><input type="text" id="company_addr1" value="Km 17.5 Carretera a San Juan Sacatepequez"></div>
+      <div class="f"><label>주소 2 <span class="tip">P9</span></label><input type="text" id="company_addr2" value="Bodega 1, 2 y 10 Condominio Parque Industrial Alfa San Juan Zona 6 Mixco, Guatemala"></div>
+      <div class="f"><label>주소 3 <span class="tip">P10</span></label><input type="text" id="company_addr3" value="Tel : (502) 2307-0400, 2307-0401"></div>
+    </div>
+  </div>
+  <div class="nav"><div></div><button class="btn btn-amber" onclick="goStep(2)">다음: 오더 라인 →</button></div>
+</div>
+
+<!-- STEP 2 -->
+<div id="step2" style="display:none">
+  <div class="card">
+    <h2>II. 오더 라인 <small style="font-weight:400;color:#aaa;text-transform:none;font-size:.75rem">(Input Order Qty 시트 — 행 5부터)</small></h2>
+    <p style="font-size:.75rem;color:#888;margin-bottom:12px">한 행 = Style/Color 조합 1개. 수량은 M열에 입력됩니다.</p>
+    <div class="twrap">
+      <table>
+        <thead><tr>
+          <th title="A열">File No</th><th title="D열">PO No</th><th title="F열">Style No</th>
+          <th title="H열">U/Price</th><th title="I열">Color</th><th title="J열">Contrast Color</th>
+          <th title="M열">Order Q'ty</th><th></th>
+        </tr></thead>
+        <tbody id="linesBody"></tbody>
+        <tfoot><tr class="tfoot-row">
+          <td colspan="6" style="text-align:right;font-size:.7rem;color:#888;padding-right:8px">합계</td>
+          <td id="tot_qty"></td><td></td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div class="brow">
+      <button class="btn btn-outline btn-sm" onclick="addLine()">+ 행 추가</button>
+      <button class="btn btn-outline btn-sm" onclick="addLines(5)">+ 5행 추가</button>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="btn btn-outline" onclick="goStep(1)">← 이전</button>
+    <button class="btn btn-amber" onclick="goStep(3)">다음: Style 정보 →</button>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div id="step3" style="display:none">
+  <div class="card">
+    <h2>III. Style 정보 입력 <small style="font-weight:400;color:#aaa;text-transform:none;font-size:.75rem">(Main 시트 — 행 18부터)</small></h2>
+    <p style="font-size:.75rem;color:#888;margin-bottom:12px">Step 2에서 입력한 고유 Style마다 원단 정보를 입력해주세요.</p>
+    <div id="styleCards"></div>
+  </div>
+  <div class="nav">
+    <button class="btn btn-outline" onclick="goStep(2)">← 이전</button>
+    <button class="btn btn-amber" onclick="goStep(4)">다음: 검토 →</button>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div id="step4" style="display:none">
+  <div class="card">
+    <h2>IV. 검토 및 파일 생성</h2>
+    <h3>기본 정보</h3>
+    <div class="rg" id="reviewBasic"></div>
+    <h3>오더 라인 (<span id="reviewCount">0</span>개)</h3>
+    <div class="twrap">
+      <table>
+        <thead><tr><th>File No</th><th>PO No</th><th>Style No</th><th>U/Price</th><th>Color</th><th>Contrast</th><th>Q'ty</th></tr></thead>
+        <tbody id="reviewLines"></tbody>
+      </table>
+    </div>
+    <div class="gbox">
+      <p>내용 확인 후 Order Card 파일을 생성하세요.</p>
+      <button class="btn btn-green" id="genBtn" onclick="generate()">📥 Order Card 생성 및 다운로드</button>
+      <div id="statusMsg"></div>
+    </div>
+  </div>
+  <div class="nav"><button class="btn btn-outline" onclick="goStep(3)">← 이전</button><div></div></div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+const API = 'https://order-card-backend.onrender.com/api/generate';
+let lines = [];
+let styleInfos = {};
+
+// ── Init ────────────────────────────────────────────────────────────────────
+window.onload = () => {
+  document.getElementById('order_date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('last_del_na').checked = true;
+  toggleDt('last_del','last_del_na');
+  for(let i=0;i<3;i++) addLine();
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const gv = id => { const e=document.getElementById(id); return e?e.value:''; };
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+
+function toggleDt(dtId, cbId) {
+  const cb=document.getElementById(cbId), dt=document.getElementById(dtId);
+  if(cb&&dt){ dt.disabled=cb.checked; dt.style.opacity=cb.checked?'0.4':'1'; }
+}
+
+function getDtVal(dtId, cbId) {
+  const cb=document.getElementById(cbId), dt=document.getElementById(dtId);
+  if(!dt) return 'N/A';
+  if(cb&&cb.checked) return 'N/A';
+  return dt.value||'N/A';
+}
+
+function handleSel(key) {
+  const sel=document.getElementById(key+'_sel');
+  const txt=document.getElementById(key+'_txt');
+  const hid=document.getElementById(key);
+  if(!sel) return;
+  if(sel.value==='__'){
+    if(txt){ txt.style.display=''; txt.focus(); txt.oninput=()=>{ if(hid) hid.value=txt.value; }; }
+    if(hid) hid.value='';
+  } else {
+    if(txt) txt.style.display='none';
+    if(hid) hid.value=sel.value;
+  }
+}
+
+function syncFileNo() {
+  const fn=gv('file_no');
+  document.querySelectorAll('.ln-file').forEach(el=>{ if(!el.dataset.e) el.value=fn; });
+}
+
+// ── PO No ────────────────────────────────────────────────────────────────────
+function getPOList() {
+  return Array.from(document.querySelectorAll('.po-inp')).map(e=>e.value.trim()).filter(v=>v);
+}
+
+function updatePoNo() {
+  const pos=getPOList();
+  const hid=document.getElementById('po_no');
+  const sum=document.getElementById('po_summary');
+  if(!pos.length){ hid.value=''; sum.textContent=''; return; }
+  if(pos.length===1){ hid.value=pos[0]; sum.textContent=`→ Main F5: "${pos[0]}"`;
+  } else { hid.value='Various'; sum.textContent=`→ Main F5: "Various" (${pos.length}개: ${pos.join(', ')})`; }
+}
+
+// ── Step navigation ──────────────────────────────────────────────────────────
+function goStep(n) {
+  [1,2,3,4].forEach(i=>{
+    const s=document.getElementById('step'+i); if(s) s.style.display=i===n?'':'none';
+    const t=document.getElementById('tab'+i);
+    if(t){ t.classList.toggle('active',i===n); if(i<n) t.classList.add('done'); }
+  });
+  if(n===2) renderLines();
+  if(n===3) renderStyleCards();
+  if(n===4) renderReview();
+}
+
+// ── Lines ─────────────────────────────────────────────────────────────────────
+function addLine(d={}) { if(d.contrast_color===undefined) d.contrast_color='N/A'; lines.push(d); renderLines(); }
+function addLines(n) { for(let i=0;i<n;i++) addLine(); }
+function removeLine(i) { lines.splice(i,1); renderLines(); }
+
+function renderLines() {
+  const fn=gv('file_no'), pn=gv('po_no');
+  document.getElementById('linesBody').innerHTML = lines.map((ln,i)=>`
+    <tr>
+      <td><input class="ln-file" value="${esc(ln.file_no||fn)}" style="width:88px" oninput="lines[${i}].file_no=this.value;this.dataset.e=1"></td>
+      <td><input class="ln-po" value="${esc(ln.po_no||pn)}" style="width:80px" oninput="lines[${i}].po_no=this.value;this.dataset.e=1"></td>
+      <td><input value="${esc(ln.style_no||'')}" style="width:130px" oninput="lines[${i}].style_no=this.value"></td>
+      <td><input type="number" value="${ln.unit_price||''}" step="0.01" style="width:62px;text-align:right" oninput="lines[${i}].unit_price=parseFloat(this.value)||0"></td>
+      <td><input value="${esc(ln.color||'')}" style="width:118px" oninput="lines[${i}].color=this.value" data-idx="${i}" data-color-code="${esc(ln.color_code||'')}"></td>
+      <td><input value="${esc(ln.contrast_color||'N/A')}" style="width:88px" oninput="lines[${i}].contrast_color=this.value"></td>
+      <td><input type="number" value="${ln.order_qty||''}" min="0" style="width:68px;text-align:right" oninput="lines[${i}].order_qty=parseInt(this.value)||0;updateTotals()"></td>
+      <td><button class="btn btn-outline btn-sm btn-danger" onclick="removeLine(${i})">✕</button></td>
+    </tr>`).join('');
+  updateTotals();
+}
+
+function updateTotals() {
+  const tot=lines.reduce((s,ln)=>s+(parseInt(ln.order_qty)||0),0);
+  document.getElementById('tot_qty').textContent=tot||'';
+}
+
+function collectLines() {
+  const fn=gv('file_no'), pn=gv('po_no');
+  document.querySelectorAll('#linesBody tr').forEach((row,i)=>{
+    const inp=row.querySelectorAll('input');
+    if(inp.length<7) return;
+    lines[i]={
+      file_no:inp[0].value||fn, po_no:inp[1].value||pn, style_no:inp[2].value,
+      unit_price:parseFloat(inp[3].value)||0, color:inp[4].value,
+      color_code:inp[4].dataset.colorCode||lines[i]?.color_code||'',
+      contrast_color:inp[5].value,
+      order_qty:parseInt(inp[6].value)||0
+    };
+  });
+}
+
+// ── Style cards ───────────────────────────────────────────────────────────────
+function getUniqueStyles() {
+  // Returns array of {style_no, color, siKey} in order of first appearance
+  const seen=new Set(), res=[];
+  lines.forEach(ln=>{
+    const s=(ln.style_no||'').trim();
+    const c=(ln.color||'').trim();
+    const key=s+'|'+c;
+    if((s||c)&&!seen.has(key)){ seen.add(key); res.push({style_no:s,color:c,siKey:key}); }
+  });
+  return res;
+}
+
+function renderStyleCards() {
+  collectLines();
+  const unique=getUniqueStyles();
+  const con=document.getElementById('styleCards');
+  if(!unique.length){ con.innerHTML='<p style="color:#aaa;font-size:.82rem">Step 2에서 Style No를 입력해주세요.</p>'; return; }
+  con.innerHTML=unique.map((item,idx)=>{
+    const {style_no:sno,color:col,siKey:key}=item;
+    const si=styleInfos[key]||{};
+    const title=sno+(col?' '+col:'');
+    return `<div style="border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:14px;background:var(--cream)">
+      <div style="font-size:.85rem;font-weight:700;color:var(--amber);margin-bottom:12px;border-bottom:1px solid var(--cream2);padding-bottom:6px">Style ${idx+1}: ${esc(title)}</div>
+      <div class="g3">
+        <div class="f"><label>Remarks / PO# <span class="tip">E열</span></label><input type="text" value="${esc(si.remarks||'')}" oninput="setSI('${esc(key)}','remarks',this.value)"></div>
+        <div class="f"><label>공임 (Sewing Charge) <span class="tip">F열</span></label><input type="number" value="${si.sewing_charge||''}" step="0.01" oninput="setSI('${esc(key)}','sewing_charge',parseFloat(this.value)||0)"></div>
+        <div class="f"></div>
+      </div>
+      <div style="margin-top:10px;font-size:.72rem;font-weight:700;color:var(--body);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Body 원단 <span style="font-size:.65rem;color:#aaa;font-weight:400;text-transform:none">(I/J/K)</span></div>
+      <div class="g3">
+        <div class="f"><label>원단명 <span class="tip">I열</span></label><input type="text" value="${esc(si.body_fabric||'')}" oninput="setSI('${esc(key)}','body_fabric',this.value)" placeholder="예: SINGLE JERSEY"></div>
+        <div class="f"><label>중량 g/m² <span class="tip">J열</span></label><input type="number" value="${si.body_weight||''}" oninput="setSI('${esc(key)}','body_weight',parseFloat(this.value)||0)"></div>
+        <div class="f"><label>원단폭 Inch <span class="tip">K열</span></label><input type="number" value="${si.body_width||''}" oninput="setSI('${esc(key)}','body_width',parseFloat(this.value)||0)"></div>
+      </div>
+      <div style="margin-top:10px;font-size:.72rem;font-weight:700;color:var(--body);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Body 부속 원단 <span style="font-size:.65rem;color:#aaa;font-weight:400;text-transform:none">(O/P/Q — 없으면 비워두세요)</span></div>
+      <div class="g3">
+        <div class="f"><label>원단명 <span class="tip">O열</span></label><input type="text" value="${esc(si.acc_fabric||'')}" oninput="setSI('${esc(key)}','acc_fabric',this.value)" placeholder="예: 1X1 RIB"></div>
+        <div class="f"><label>중량 g/m² <span class="tip">P열</span></label><input type="number" value="${si.acc_weight||''}" oninput="setSI('${esc(key)}','acc_weight',parseFloat(this.value)||0)"></div>
+        <div class="f"><label>원단폭 Inch <span class="tip">Q열</span></label><input type="number" value="${si.acc_width||''}" oninput="setSI('${esc(key)}','acc_width',parseFloat(this.value)||0)"></div>
+      </div>
+      <div style="margin-top:10px;font-size:.72rem;font-weight:700;color:var(--body);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">요척 <span style="font-size:.65rem;color:#aaa;font-weight:400;text-transform:none">(/DZ)</span></div>
+      <div class="g2">
+        <div class="f"><label>Body1 요척 <span class="tip">U열</span></label><input type="number" value="${si.yield_body||''}" step="0.001" oninput="setSI('${esc(key)}','yield_body',parseFloat(this.value)||0)"></div>
+        <div class="f"><label>부속1 요척 <span class="tip">W열</span></label><input type="number" value="${si.yield_acc||''}" step="0.001" oninput="setSI('${esc(key)}','yield_acc',parseFloat(this.value)||0)"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setSI(sno,key,val) { if(!styleInfos[sno]) styleInfos[sno]={}; styleInfos[sno][key]=val; }
+
+function getStyleInfosList() {
+  return getUniqueStyles().map(({style_no,color,siKey})=>({
+    style_no, color, ...(styleInfos[siKey]||{})
+  }));
+}
+
+// ── Basic payload ──────────────────────────────────────────────────────────────
+function getBasic() {
+  return {
+    file_no:gv('file_no'), po_no:gv('po_no'), po_list:getPOList(),
+    date:gv('order_date'), buyer:gv('buyer'), price_terms:gv('price_terms'),
+    factory1:gv('factory1'), factory2:gv('factory2'),
+    first_delivery:gv('first_del')||'N/A',
+    last_delivery:getDtVal('last_del','last_del_na'),
+    author:gv('author'), department:gv('department'),
+    days_after:parseFloat(gv('days_after'))||30,
+    yarn_dye_date:getDtVal('yarndy_dt','yarndy_na'),
+    finishing1_date:getDtVal('fin1_dt','fin1_na'),
+    finishing2_date:getDtVal('fin2_dt','fin2_na'),
+    yarn_dye:gv('yarn_dye'),
+    company_name:gv('company_name'), company_addr1:gv('company_addr1'),
+    company_addr2:gv('company_addr2'), company_addr3:gv('company_addr3'),
+  };
+}
+
+// ── Review ─────────────────────────────────────────────────────────────────────
+function renderReview() {
+  collectLines();
+  const b=getBasic();
+  const fields=[['File No',b.file_no],['PO No',b.po_no],['날짜',b.date],['Buyer',b.buyer],
+    ['가격조건',b.price_terms],['선염여부',b.yarn_dye],['봉제처1',b.factory1],['봉제처2',b.factory2||'—'],
+    ['첫납기',b.first_delivery],['마지막납기',b.last_delivery],['작성자',b.author],['소속',b.department],
+    ['원단출고일로부터',b.days_after+'일'],['Yarn Dye 납기',b.yarn_dye_date],
+    ['외부가공1 납기',b.finishing1_date],['외부가공2 납기',b.finishing2_date],['회사명',b.company_name]];
+  document.getElementById('reviewBasic').innerHTML=fields.map(([k,v])=>
+    `<div class="ri"><div class="rk">${k}</div><div class="rv">${v||'—'}</div></div>`).join('');
+  const valid=lines.filter(ln=>ln.style_no||ln.color);
+  document.getElementById('reviewCount').textContent=valid.length;
+  document.getElementById('reviewLines').innerHTML=valid.map(ln=>
+    `<tr><td>${ln.file_no||''}</td><td>${ln.po_no||''}</td><td>${ln.style_no||''}</td>
+     <td style="text-align:right">${ln.unit_price||''}</td><td>${ln.color||''}</td>
+     <td>${ln.contrast_color||''}</td><td style="text-align:right;font-weight:700">${ln.order_qty||''}</td></tr>`).join('');
+}
+
+// ── Generate ────────────────────────────────────────────────────────────────────
+async function generate() {
+  collectLines();
+  const valid=lines.filter(ln=>ln.style_no||ln.color);
+  if(!valid.length){ showSt('오더 라인을 입력해주세요.','err'); return; }
+  const btn=document.getElementById('genBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>생성 중...';
+  showSt('','');
+  try {
+    const resp=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({basic:getBasic(),lines:valid,style_infos:getStyleInfosList()})});
+    if(!resp.ok) throw new Error(`서버 오류 (${resp.status})`);
+    const blob=await resp.blob();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`OrderCard_${gv('file_no')||'output'}.xlsm`;
+    a.click();
+    showSt('✅ 다운로드 완료!','ok');
+  } catch(e){ showSt('❌ '+e.message,'err'); }
+  finally{ btn.disabled=false; btn.innerHTML='📥 Order Card 생성 및 다운로드'; }
+}
+
+function showSt(msg,type){ const e=document.getElementById('statusMsg'); e.textContent=msg; e.className=type; }
+
+// ── Order Recap 불러오기 ─────────────────────────────────────────────────────────
+function loadRecap(input) {
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e) {
+    try {
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:false});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      // raw:true → dates as serials (numbers), strings as strings
+      const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+
+      const cell=(r,c)=>{ try{ const v=data[r]&&data[r][c]; return (v!==null&&v!==undefined&&v!=='')?String(v).trim():''; }catch(e){return '';} };
+
+      // Excel serial → YYYY-MM-DD
+      const serialToDate=s=>{
+        if(!s||typeof s!=='number'||s<40000) return null;
+        const base=new Date(1899,11,30);
+        const d=new Date(base.getTime()+s*86400000);
+        const y=d.getFullYear();
+        const m=String(d.getMonth()+1).padStart(2,'0');
+        const dy=String(d.getDate()).padStart(2,'0');
+        return `${y}-${m}-${dy}`;
+      };
+
+      // File# check (C1 = row0, col2)
+      const recapFile=cell(0,2);
+      const currentFile=gv('file_no').trim();
+      if(currentFile&&recapFile&&currentFile!==recapFile){
+        setRecapStatus(`⚠️ File# 불일치: 폼(${currentFile}) ≠ 파일(${recapFile})`,'var(--red)');
+        input.value=''; return;
+      }
+
+      // Fill File#
+      if(recapFile){ document.getElementById('file_no').value=recapFile; syncFileNo(); }
+
+      // Sewing (C4 = row3, col2)
+      const sewing=cell(3,2);
+      if(sewing){
+        const norm=s=>s.replace(/\s*,\s*/g,',').toUpperCase();
+        const sel=document.getElementById('factory1_sel');
+        const opt=Array.from(sel.options).find(o=>norm(o.value)===norm(sewing));
+        if(opt){ sel.value=opt.value; document.getElementById('factory1').value=opt.value; document.getElementById('factory1_txt').style.display='none'; }
+        else { sel.value='__'; document.getElementById('factory1_txt').style.display=''; document.getElementById('factory1_txt').value=sewing; document.getElementById('factory1').value=sewing; }
+      }
+
+      // PO# (row16=index16, cols 2,4,6,...32)
+      const poCols=[2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];
+      const poVals=poCols.map(c=>cell(16,c)).filter(v=>v&&v!=='PO#');
+      const poInps=document.querySelectorAll('.po-inp');
+      poInps.forEach((inp,i)=>{ inp.value=poVals[i]||''; });
+      updatePoNo();
+
+      // EX FACTORY DATE (row18=index18) → 첫납기 = min
+      // DELIVERY DATE (row19=index19) → 마지막납기 = max
+      const exRaw=poCols.map(c=>data[18]&&data[18][c]).filter(v=>v&&typeof v==='number');
+      const dlRaw=poCols.map(c=>data[19]&&data[19][c]).filter(v=>v&&typeof v==='number');
+      const exDates=exRaw.map(serialToDate).filter(Boolean).sort();
+      const dlDates=dlRaw.map(serialToDate).filter(Boolean).sort();
+
+      if(exDates.length){ document.getElementById('first_del').value=exDates[0]; }
+      if(dlDates.length){
+        const lastDelDt=document.getElementById('last_del');
+        const lastDelCb=document.getElementById('last_del_na');
+        lastDelCb.checked=false; toggleDt('last_del','last_del_na');
+        lastDelDt.value=dlDates[dlDates.length-1];
+      }
+
+      // U/Price: sum(qty*fob)/sum(qty) per PO column
+      // PCS cols: 2,4,6,...  FOB cols: 3,5,7,...
+      const fobCols=poCols.map(c=>c+1); // D,F,H,J...
+      const sizeRows=[];
+      for(let r=29;r<=44;r++){
+        const pcsVals=poCols.map(c=>(data[r]&&data[r][c]&&typeof data[r][c]==='number')?data[r][c]:0);
+        const fobVals=fobCols.map(c=>(data[r]&&data[r][c]&&typeof data[r][c]==='number')?data[r][c]:0);
+        if(pcsVals.some(v=>v>0)||fobVals.some(v=>v>0)) sizeRows.push({pcs:pcsVals,fob:fobVals});
+      }
+      const uPrices=poCols.map((_,ci)=>{
+        const totalAmt=sizeRows.reduce((s,row)=>s+row.pcs[ci]*row.fob[ci],0);
+        const totalQty=sizeRows.reduce((s,row)=>s+row.pcs[ci],0);
+        return totalQty>0?Math.round(totalAmt/totalQty*100)/100:0;
+      });
+
+      // Fabric combination map: rows 10-13 (index 9-12)
+      // Col A=combo name, C=body code, D=body desc, G=trim code, H=trim desc
+      const fabricMap={};
+      for(let r=9;r<=13;r++){
+        const combo=(data[r]&&data[r][0])?String(data[r][0]).trim().replace(/\s+/g,''):'';
+        const bodyCode=(data[r]&&data[r][2])?String(data[r][2]).trim():'';
+        const bodyDesc=(data[r]&&data[r][3])?String(data[r][3]).trim():'';
+        const accCode=(data[r]&&data[r][6])?String(data[r][6]).trim():'';
+        const accDesc=(data[r]&&data[r][7])?String(data[r][7]).trim():'';
+        if(combo) fabricMap[combo]={bodyCode,bodyDesc,accCode,accDesc};
+      }
+
+      // Style/Color lines (STYLE#=row20, COLOR=row22, ORDER UNIT=row17, Fabric=row23)
+      const lineData=[];
+      poCols.forEach((c,ci)=>{
+        const styleNo=cell(20,c);
+        const colorCode=cell(21,c);
+        const color=cell(22,c);
+        const qty=cell(17,c);
+        const fabricCode=(data[23]&&data[23][c])?String(data[23][c]).trim().replace(/\s+/g,''):'';
+        if(!styleNo&&!color) return;
+        // Set styleInfo for this style+color combo
+        const siKey=styleNo+'|'+color;
+        const fab=fabricMap[fabricCode]||{};
+        if(!styleInfos[siKey]) styleInfos[siKey]={};
+        if(fab.bodyDesc) styleInfos[siKey].body_fabric=fab.bodyDesc;
+        if(fab.accDesc) styleInfos[siKey].acc_fabric=fab.accDesc;
+        styleInfos[siKey].remarks=poVals[ci]||'';
+        lineData.push({file_no:recapFile, po_no:poVals[ci]||'', style_no:styleNo,
+          color_code:colorCode, color:color, contrast_color:'N/A', unit_price:uPrices[ci]||0, order_qty:parseInt(qty)||0,
+          _siKey:siKey});
+      });
+      if(lineData.length){ lines=lineData; renderLines(); }
+
+      setRecapStatus(`✅ ${recapFile} 불러옴 (${lineData.length}개 라인)`,'var(--green)');
+    } catch(err){
+      setRecapStatus('❌ 파일 읽기 실패: '+err.message,'var(--red)');
+    }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function setRecapStatus(msg,color){
+  const el=document.getElementById('recapStatus');
+  el.textContent=msg; el.style.color=color;
+}
+</script>
+</body>
+</html>
