@@ -1,0 +1,2148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Order Card Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Malgun Gothic',Arial,sans-serif;background:#f5f5f5;color:#222}
+.header{background:#1a1a2e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.header h1{font-size:18px;font-weight:700}
+.step-bar{background:#fff;border-bottom:1px solid #ddd;padding:0 24px}
+.steps{display:flex;gap:0}
+.step{padding:14px 24px;font-size:13px;color:#999;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.step.active{color:#c8860a;border-bottom-color:#c8860a;font-weight:700}
+.step.done{color:#555}
+.content{max-width:960px;margin:24px auto;padding:0 16px}
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:20px;overflow:hidden}
+.card-head{background:#1a1a2e;color:#fff;padding:10px 16px;font-size:13px;font-weight:700}
+.card-head.amber{background:#c8860a}
+.card-body{padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:#666;font-weight:600}
+.field input,.field select,.field textarea{border:1px solid #ccc;border-radius:4px;padding:7px 10px;font-size:13px;font-family:inherit;width:100%}
+.field input:focus,.field select:focus{outline:none;border-color:#c8860a}
+.field input[type=date]{cursor:pointer}
+.date-row{display:flex;align-items:center;gap:8px}
+.date-row input[type=date]{flex:1}
+.date-row label.na{display:flex;align-items:center;gap:4px;font-size:12px;color:#666;white-space:nowrap}
+.inline-sel{display:flex;gap:8px}
+.inline-sel select{flex:1}
+.inline-sel input{flex:2}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:5px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit}
+.btn-primary{background:#c8860a;color:#fff}
+.btn-primary:hover{background:#a36c08}
+.btn-secondary{background:#1a1a2e;color:#fff}
+.btn-secondary:hover{background:#2d2d50}
+.btn-outline{background:#fff;color:#1a1a2e;border:1.5px solid #1a1a2e}
+.btn-outline:hover{background:#f0f0f0}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-danger{background:#dc3545;color:#fff}
+.bottom-bar{display:flex;justify-content:space-between;align-items:center;margin-top:24px}
+.po-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.po-grid input{border:1px solid #ccc;border-radius:4px;padding:6px 8px;font-size:12px;width:100%;font-family:inherit}
+table.lines{width:100%;border-collapse:collapse;font-size:12px}
+table.lines th{background:#f0f0f0;padding:7px 8px;text-align:left;font-weight:700;border:1px solid #ddd}
+table.lines td{padding:5px 6px;border:1px solid #eee;vertical-align:middle}
+table.lines td input{border:1px solid #ddd;border-radius:3px;padding:4px 6px;font-size:12px;width:100%;font-family:inherit}
+table.lines td input:focus{outline:none;border-color:#c8860a}
+.del-btn{background:none;border:none;color:#dc3545;cursor:pointer;font-size:16px;padding:2px 4px}
+.style-card{border:1px solid #ddd;border-radius:6px;margin-bottom:12px;overflow:hidden}
+.style-card-head{background:#2d2d50;color:#fff;padding:8px 12px;font-size:12px;font-weight:700}
+.style-card-body{padding:12px}
+.alert{padding:10px 14px;border-radius:5px;font-size:13px;margin-bottom:12px}
+.alert-warn{background:#fff3cd;border:1px solid #ffc107;color:#856404}
+.alert-info{background:#d1ecf1;border:1px solid #bee5eb;color:#0c5460}
+.summary-table{width:100%;border-collapse:collapse;font-size:13px}
+.summary-table th{background:#f5f5f5;padding:8px 12px;text-align:left;border:1px solid #ddd;font-weight:700}
+.summary-table td{padding:8px 12px;border:1px solid #ddd}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+.tag-green{background:#d4edda;color:#155724}
+.hidden{display:none!important}
+.recap-btn{background:#edf7ed;border:1.5px solid #28a745;color:#155724;border-radius:5px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.recap-btn:hover{background:#c3e6cb}
+.warn-text{color:#dc3545;font-size:12px;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>📋</div>
+  <h1>Order Card Generator</h1>
+  <span style="margin-left:auto;font-size:12px;opacity:.6">Apparel Links S.A.</span>
+</div>
+
+<div class="step-bar">
+  <div class="steps">
+    <div class="step active" id="tab1" onclick="goTab(1)">① 기본정보</div>
+    <div class="step" id="tab2" onclick="goTab(2)">② 오더 라인</div>
+    <div class="step" id="tab3" onclick="goTab(3)">③ Style 정보</div>
+    <div class="step" id="tab4" onclick="goTab(4)">④ 편직/염색</div>
+    <div class="step" id="tab5" onclick="goTab(5)">⑤ 검토 &amp; 생성</div>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ─── STEP 1 ─────────────────────────────────────────────────────────── -->
+<div id="step1">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <button class="recap-btn" onclick="document.getElementById('recapFile').click()">
+      📂 오더리캡 불러오기
+    </button>
+    <input type="file" id="recapFile" class="hidden" accept=".xlsx,.xls" onchange="loadOrderRecap(this)">
+  </div>
+  <div id="recapAlert" class="hidden"></div>
+
+  <div class="card">
+    <div class="card-head">I. 일반정보</div>
+    <div class="card-body">
+      <div class="grid2">
+        <div class="field">
+          <label>File #</label>
+          <input type="text" id="file_no" placeholder="예) 264T001-1" oninput="syncFileNo()">
+        </div>
+        <div class="field">
+          <label>작지 날짜</label>
+          <input type="date" id="date">
+        </div>
+        <div class="field">
+          <label>Buyer</label>
+          <div class="inline-sel">
+            <select id="buyer_sel" onchange="handleSel('buyer_sel','buyer_txt')">
+              <option value="CARHARTT">CARHARTT</option>
+              <option value="KONTOOR">KONTOOR</option>
+              <option value="EXPRESS">EXPRESS</option>
+              <option value="__direct__">직접 입력</option>
+            </select>
+            <input type="text" id="buyer_txt" class="hidden" placeholder="Buyer 입력">
+          </div>
+        </div>
+        <div class="field">
+          <label>가격조건</label>
+          <input type="text" id="price_terms" value="FOB GUATEMALA">
+        </div>
+        <div class="field">
+          <label>봉제처 1</label>
+          <div class="inline-sel">
+            <select id="fac1_sel" onchange="handleSel('fac1_sel','fac1_txt')">
+              <option value="APPAREL LINKS,S.A.">APPAREL LINKS,S.A.</option>
+              <option value="INT PLANTA">INT PLANTA</option>
+              <option value="VAN DAM">VAN DAM</option>
+              <option value="KORAMSA">KORAMSA</option>
+              <option value="HANSOL">HANSOL</option>
+              <option value="CONFECCIONES GEORGIA">CONFECCIONES GEORGIA</option>
+              <option value="NOVELTY">NOVELTY</option>
+              <option value="__direct__">직접 입력</option>
+            </select>
+            <input type="text" id="fac1_txt" class="hidden" placeholder="봉제처 1 입력">
+          </div>
+        </div>
+        <div class="field">
+          <label>봉제처 2</label>
+          <div class="inline-sel">
+            <select id="fac2_sel" onchange="handleSel('fac2_sel','fac2_txt')">
+              <option value="">없음</option>
+              <option value="APPAREL LINKS,S.A.">APPAREL LINKS,S.A.</option>
+              <option value="INT PLANTA">INT PLANTA</option>
+              <option value="VAN DAM">VAN DAM</option>
+              <option value="KORAMSA">KORAMSA</option>
+              <option value="HANSOL">HANSOL</option>
+              <option value="CONFECCIONES GEORGIA">CONFECCIONES GEORGIA</option>
+              <option value="NOVELTY">NOVELTY</option>
+              <option value="__direct__">직접 입력</option>
+            </select>
+            <input type="text" id="fac2_txt" class="hidden" placeholder="봉제처 2 입력">
+          </div>
+        </div>
+        <div class="field">
+          <label>첫 납기</label>
+          <input type="date" id="delivery_first">
+        </div>
+        <div class="field">
+          <label>마지막 납기</label>
+          <div class="date-row">
+            <input type="date" id="delivery_last">
+            <label class="na"><input type="checkbox" id="dlast_na" onchange="toggleDate('delivery_last','dlast_na')"> 해당없음</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>작성자</label>
+          <input type="text" id="author" placeholder="이름 입력">
+        </div>
+        <div class="field">
+          <label>소속</label>
+          <select id="dept">
+            <option>영업1팀</option><option>영업2팀</option><option>영업3팀</option>
+            <option selected>영업4팀</option>
+            <option>영업5팀</option><option>영업6팀</option><option>영업7팀</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>선염여부</label>
+          <select id="yarn_dye">
+            <option value="N">N (후염)</option>
+            <option value="Y">Y (선염)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">원단 납기</div>
+    <div class="card-body">
+      <div class="grid2">
+        <div class="field">
+          <label>원단출고 작지일로부터 (일수)</label>
+          <input type="number" id="fabric_days" value="15">
+        </div>
+        <div></div>
+        <div class="field">
+          <label>원단납기 (편·염 작지)</label>
+          <input type="date" id="fabric_date1">
+        </div>
+        <div class="field">
+          <label>원단납기 (YARN DYE)</label>
+          <div class="date-row">
+            <input type="date" id="fabric_date2" disabled>
+            <label class="na"><input type="checkbox" id="fd2_na" onchange="toggleDate('fabric_date2','fd2_na')" checked> 해당없음</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>원단납기 (외부가공 1)</label>
+          <div class="date-row">
+            <input type="date" id="fabric_date3" disabled>
+            <label class="na"><input type="checkbox" id="fd3_na" onchange="toggleDate('fabric_date3','fd3_na')" checked> 해당없음</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>원단납기 (외부가공 2)</label>
+          <div class="date-row">
+            <input type="date" id="fabric_date4" disabled>
+            <label class="na"><input type="checkbox" id="fd4_na" onchange="toggleDate('fabric_date4','fd4_na')" checked> 해당없음</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">회사 정보 (고정)</div>
+    <div class="card-body">
+      <div class="grid2">
+        <div class="field"><label>회사명</label><input type="text" id="company1" value="Apparel Links, S.A."></div>
+        <div class="field"><label>주소 1</label><input type="text" id="company2" value="Km 17.5 Carretera a San Juan Sacatequez"></div>
+        <div class="field"><label>주소 2</label><input type="text" id="company3" value="Bodega 1, 2 y 10 Condominio Parque Industrial Alfa San Juan"></div>
+        <div class="field"><label>주소 3</label><input type="text" id="company4" value="Tel : (502) 2307-0400, 2307-0401"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div></div>
+    <button class="btn btn-primary" onclick="goTab(2)">다음 → 오더 라인</button>
+  </div>
+</div>
+
+<!-- ─── STEP 2 ─────────────────────────────────────────────────────────── -->
+<div id="step2" class="hidden">
+  <div class="card">
+    <div class="card-head">PO # 목록 (최대 16개)</div>
+    <div class="card-body">
+      <div class="po-grid" id="poGrid"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head amber">오더 라인</div>
+    <div class="card-body">
+      <div style="overflow-x:auto">
+        <table class="lines">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>PO #</th>
+              <th>Style #</th>
+              <th>Color Code</th>
+              <th>Color Name</th>
+              <th>Qty</th>
+              <th>U/Price</th>
+              <th>Contrast Color</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="linesTbody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-outline btn-sm" onclick="addLine()">+ 행 추가</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <button class="btn btn-outline" onclick="goTab(1)">← 이전</button>
+    <button class="btn btn-primary" onclick="goTab(3)">다음 → Style 정보</button>
+  </div>
+</div>
+
+<!-- ─── STEP 3 ─────────────────────────────────────────────────────────── -->
+<div id="step3" class="hidden">
+  <div class="alert alert-info">
+    각 오더 라인별 원단 정보를 입력하세요. 오더리캡에서 자동으로 채워진 항목은 확인 후 수정하세요.
+  </div>
+  <div id="styleCards"></div>
+
+  <!-- IV. 작지별 원단 구성 -->
+  <div class="card" style="margin-top:4px">
+    <div class="card-head">IV. 작지별 원단 구성</div>
+    <div class="card-body">
+      <div class="alert alert-warn" style="margin-bottom:12px;font-size:12px">
+        ⚠️ 엑셀 슬롯은 4개 고정 (작지1~4). 각 행에서 슬롯을 배정하면 G열(Body1/Rib1 등)이 자동 결정됩니다. 슬롯이 4개를 초과하면 <strong>미사용</strong>으로 두세요.
+      </div>
+      <div id="jaktjiCards"></div>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn btn-outline" onclick="goTab(2)">← 이전</button>
+    <button class="btn btn-primary" onclick="goTab(4)">다음 → 편직/염색</button>
+  </div>
+</div>
+
+<!-- ─── STEP 4 ─────────────────────────────────────────────────────────── -->
+<div id="step4" class="hidden">
+  <div class="card">
+    <div class="card-head">VII. 편직처 / 염색처 / Loss / 가공임</div>
+    <div class="card-body">
+      <div class="alert alert-info" style="font-size:12px;margin-bottom:16px">
+        원단별 행은 Section IV 작지별 원단 구성에서 입력한 원단명이 자동 표시됩니다.
+      </div>
+
+      <!-- 편직처 1,2,3 / 염색처 1,2,3 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px">
+        <div class="field">
+          <label>편직처1 (F262)</label>
+          <select id="s7_knitter1" onchange="sel_knitter1=this.value;renderSec7()"><option value="">해당없음</option><option value="BONANZA TEXTIL, S.A.">BONANZA TEXTIL, S.A.</option><option value="GRAND PARTNERS TRADING, S.A.">GRAND PARTNERS TRADING, S.A.</option><option value="J.W. TEXTILES, S.A.">J.W. TEXTILES, S.A.</option><option value="JS TEXTILE, S.A.">JS TEXTILE, S.A.</option><option value="KILSUNG GUATEMALA, S.A.">KILSUNG GUATEMALA, S.A.</option><option value="KNITOPIA GUATEMALA, S.A." selected>KNITOPIA GUATEMALA, S.A.</option><option value="KNITOPIA, S.A.">KNITOPIA, S.A.</option><option value="KYONG GI, S.A.">KYONG GI, S.A.</option><option value="LEE CHO TEXTILE, S.A.">LEE CHO TEXTILE, S.A.</option><option value="MD TEXTILES, S.A.">MD TEXTILES, S.A.</option><option value="MILAGRO GUATEMALA, S.A.">MILAGRO GUATEMALA, S.A.</option><option value="NCL TEXTIL, S.A.">NCL TEXTIL, S.A.</option><option value="TEXTILES CHANG WOO, SOCIEDAD ANONIMA">TEXTILES CHANG WOO, SOCIEDAD ANONIMA</option></select>
+        </div>
+        <div class="field">
+          <label>편직처2 (G262)</label>
+          <select id="s7_knitter2" onchange="sel_knitter2=this.value;renderSec7()"><option value="">해당없음</option><option value="BONANZA TEXTIL, S.A.">BONANZA TEXTIL, S.A.</option><option value="GRAND PARTNERS TRADING, S.A.">GRAND PARTNERS TRADING, S.A.</option><option value="J.W. TEXTILES, S.A.">J.W. TEXTILES, S.A.</option><option value="JS TEXTILE, S.A.">JS TEXTILE, S.A.</option><option value="KILSUNG GUATEMALA, S.A.">KILSUNG GUATEMALA, S.A.</option><option value="KNITOPIA GUATEMALA, S.A." selected>KNITOPIA GUATEMALA, S.A.</option><option value="KNITOPIA, S.A.">KNITOPIA, S.A.</option><option value="KYONG GI, S.A.">KYONG GI, S.A.</option><option value="LEE CHO TEXTILE, S.A.">LEE CHO TEXTILE, S.A.</option><option value="MD TEXTILES, S.A.">MD TEXTILES, S.A.</option><option value="MILAGRO GUATEMALA, S.A.">MILAGRO GUATEMALA, S.A.</option><option value="NCL TEXTIL, S.A.">NCL TEXTIL, S.A.</option><option value="TEXTILES CHANG WOO, SOCIEDAD ANONIMA">TEXTILES CHANG WOO, SOCIEDAD ANONIMA</option></select>
+        </div>
+        <div class="field">
+          <label>편직처3 (H262)</label>
+          <select id="s7_knitter3" onchange="sel_knitter3=this.value;renderSec7()"><option value="">해당없음</option><option value="BONANZA TEXTIL, S.A.">BONANZA TEXTIL, S.A.</option><option value="GRAND PARTNERS TRADING, S.A.">GRAND PARTNERS TRADING, S.A.</option><option value="J.W. TEXTILES, S.A.">J.W. TEXTILES, S.A.</option><option value="JS TEXTILE, S.A.">JS TEXTILE, S.A.</option><option value="KILSUNG GUATEMALA, S.A.">KILSUNG GUATEMALA, S.A.</option><option value="KNITOPIA GUATEMALA, S.A." selected>KNITOPIA GUATEMALA, S.A.</option><option value="KNITOPIA, S.A.">KNITOPIA, S.A.</option><option value="KYONG GI, S.A.">KYONG GI, S.A.</option><option value="LEE CHO TEXTILE, S.A.">LEE CHO TEXTILE, S.A.</option><option value="MD TEXTILES, S.A.">MD TEXTILES, S.A.</option><option value="MILAGRO GUATEMALA, S.A.">MILAGRO GUATEMALA, S.A.</option><option value="NCL TEXTIL, S.A.">NCL TEXTIL, S.A.</option><option value="TEXTILES CHANG WOO, SOCIEDAD ANONIMA">TEXTILES CHANG WOO, SOCIEDAD ANONIMA</option></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div class="field">
+          <label>염색처1 (D177)</label>
+          <select id="s7_dyehouse" onchange="sel_dyehouse=this.value;renderSec7()"><option value="">해당없음</option><option value="TEXTILES SOLAFE, S.A.">TEXTILES SOLAFE, S.A.</option><option value="C.R. TEXTIL, SOCIEDAD ANONIMA" selected>C.R. TEXTIL, SOCIEDAD ANONIMA</option><option value="CENTROTEX GUATEMALA, S.A.">CENTROTEX GUATEMALA, S.A.</option><option value="CLAROTEX GUATEMALA, S.A.">CLAROTEX GUATEMALA, S.A.</option><option value="CORPORACION ACRO, S.A.">CORPORACION ACRO, S.A.</option><option value="SANGBO INTERNACIONAL, S.A. (YARN DYEING)">SANGBO INTERNACIONAL, S.A. (YARN DYEING)</option><option value="COLOR FULL, S.A.">COLOR FULL, S.A.</option><option value="DAAIN, S.A. (YARN DYEING)">DAAIN, S.A. (YARN DYEING)</option><option value="NUEVO MUNDO TEXTIL, S.A.">NUEVO MUNDO TEXTIL, S.A.</option></select>
+        </div>
+        <div class="field">
+          <label>염색처2 (J177)</label>
+          <select id="s7_dyehouse2" onchange="sel_dyehouse2=this.value;renderSec7()"><option value="">해당없음</option><option value="TEXTILES SOLAFE, S.A.">TEXTILES SOLAFE, S.A.</option><option value="C.R. TEXTIL, SOCIEDAD ANONIMA" selected>C.R. TEXTIL, SOCIEDAD ANONIMA</option><option value="CENTROTEX GUATEMALA, S.A.">CENTROTEX GUATEMALA, S.A.</option><option value="CLAROTEX GUATEMALA, S.A.">CLAROTEX GUATEMALA, S.A.</option><option value="CORPORACION ACRO, S.A.">CORPORACION ACRO, S.A.</option><option value="SANGBO INTERNACIONAL, S.A. (YARN DYEING)">SANGBO INTERNACIONAL, S.A. (YARN DYEING)</option><option value="COLOR FULL, S.A.">COLOR FULL, S.A.</option><option value="DAAIN, S.A. (YARN DYEING)">DAAIN, S.A. (YARN DYEING)</option><option value="NUEVO MUNDO TEXTIL, S.A.">NUEVO MUNDO TEXTIL, S.A.</option></select>
+        </div>
+        <div class="field">
+          <label>염색처3 (J179)</label>
+          <select id="s7_dyehouse3" onchange="sel_dyehouse3=this.value;renderSec7()"><option value="">해당없음</option><option value="TEXTILES SOLAFE, S.A.">TEXTILES SOLAFE, S.A.</option><option value="C.R. TEXTIL, SOCIEDAD ANONIMA" selected>C.R. TEXTIL, SOCIEDAD ANONIMA</option><option value="CENTROTEX GUATEMALA, S.A.">CENTROTEX GUATEMALA, S.A.</option><option value="CLAROTEX GUATEMALA, S.A.">CLAROTEX GUATEMALA, S.A.</option><option value="CORPORACION ACRO, S.A.">CORPORACION ACRO, S.A.</option><option value="SANGBO INTERNACIONAL, S.A. (YARN DYEING)">SANGBO INTERNACIONAL, S.A. (YARN DYEING)</option><option value="COLOR FULL, S.A.">COLOR FULL, S.A.</option><option value="DAAIN, S.A. (YARN DYEING)">DAAIN, S.A. (YARN DYEING)</option><option value="NUEVO MUNDO TEXTIL, S.A.">NUEVO MUNDO TEXTIL, S.A.</option></select>
+        </div>
+      </div>
+
+      <!-- 원단별 Loss / 가공임 테이블 -->
+      <div id="sec7Table" style="overflow-x:auto"></div>
+
+      <!-- 원단 출고처 M268~271 -->
+      <div style="margin-top:20px" id="fabricDeliverySection"></div>
+
+      <!-- 외부가공1 -->
+      <div style="margin-top:20px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#2c3e6b">외부가공1 (Finishing Outside 1)</div>
+        <div class="grid3">
+          <div class="field">
+            <label>외부가공처 (O260)</label>
+            <select id="s7_fin1_co"><option value="">해당없음</option><option value="DAAIN, S.A. (WASHING)">DAAIN, S.A. (WASHING)</option><option value="ILJO GUATEMALA, S.A.">ILJO GUATEMALA, S.A.</option><option value="JAE SUNG INTERNACIONAL TEXTILES, S.A.">JAE SUNG INTERNACIONAL TEXTILES, S.A.</option><option value="JNB II, SOCIEDAD ANONIMA">JNB II, SOCIEDAD ANONIMA</option><option value="JS PRINT GUATEMALA, S.A.">JS PRINT GUATEMALA, S.A.</option></select>
+          </div>
+          <div class="field">
+            <label>가공 방법 (O262)</label>
+            <input type="text" id="s7_fin1_method" placeholder="예: Fabric Print, Spray Tumble">
+          </div>
+          <div></div>
+        </div>
+      </div>
+
+      <!-- 외부가공2 -->
+      <div style="margin-top:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#2c3e6b">외부가공2 (Finishing Outside 2)</div>
+        <div class="grid3">
+          <div class="field">
+            <label>외부가공처 (S260)</label>
+            <select id="s7_fin2_co"><option value="">해당없음</option><option value="DAAIN, S.A. (WASHING)">DAAIN, S.A. (WASHING)</option><option value="ILJO GUATEMALA, S.A.">ILJO GUATEMALA, S.A.</option><option value="JAE SUNG INTERNACIONAL TEXTILES, S.A.">JAE SUNG INTERNACIONAL TEXTILES, S.A.</option><option value="JNB II, SOCIEDAD ANONIMA">JNB II, SOCIEDAD ANONIMA</option><option value="JS PRINT GUATEMALA, S.A.">JS PRINT GUATEMALA, S.A.</option></select>
+          </div>
+          <div class="field">
+            <label>가공 방법 (S262)</label>
+            <input type="text" id="s7_fin2_method" placeholder="예: Fabric Print, Spray Tumble">
+          </div>
+          <div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── X. 원사 사종 및 가격 ───────────────────────────────────────────── -->
+  <div class="card" style="margin-top:20px">
+    <div class="card-head amber">X. 원사 사종 및 가격 입력 (Main O열 + E290~)</div>
+    <div class="card-body">
+      <div class="alert alert-info" style="font-size:12px;margin-bottom:14px">
+        원사 타입은 ④ 작지 원단 구성에서 입력한 원사명으로 자동 생성됩니다.
+        각 원사의 전체 사종명(풀네임)과 원사 가격을 입력하세요.
+      </div>
+      <div id="yarnPriceSection"></div>
+    </div>
+  </div>
+
+  <!-- ─── XII. 원가계산 파라미터 ─────────────────────────────────────────── -->
+  <div class="card" style="margin-top:20px">
+    <div class="card-head amber">XII. 원가계산 파라미터</div>
+    <div class="card-body">
+      <div class="grid3" style="margin-bottom:12px">
+        <div class="field">
+          <label>일반경비 % (G333)</label>
+          <input type="number" step="0.01" id="cp_general_pct" placeholder="예: 9.88"
+            oninput="costParams.general_pct=this.value">
+        </div>
+        <div class="field">
+          <label>Financing % (G335)</label>
+          <input type="number" step="0.01" id="cp_commission_pct" placeholder="예: 4.00"
+            oninput="costParams.commission_pct=this.value">
+        </div>
+        <div class="field">
+          <label>O/Freight 단가 $/pc (F334)</label>
+          <input type="number" step="0.001" id="cp_freight" placeholder="예: 0.030"
+            oninput="costParams.freight=this.value">
+        </div>
+        <div class="field">
+          <label>Test 단가 $/pc (F336)</label>
+          <input type="number" step="0.001" id="cp_test_fee" placeholder="예: 0.050"
+            oninput="costParams.test_fee=this.value">
+        </div>
+        <div class="field">
+          <label>Duty $/pc (AS532, 선택)</label>
+          <input type="number" step="0.001" id="cp_duty" placeholder="0 = 입력안함"
+            oninput="costParams.duty=this.value">
+        </div>
+        <div class="field">
+          <label>기타1 $/pc (AT532, 선택)</label>
+          <input type="number" step="0.001" id="cp_extra1" placeholder="0 = 입력안함"
+            oninput="costParams.extra1=this.value">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn btn-outline" onclick="goTab(3)">← 이전</button>
+    <button class="btn btn-primary" onclick="goTab(5)">다음 → 검토 &amp; 생성</button>
+  </div>
+</div>
+
+<!-- ─── STEP 5 ─────────────────────────────────────────────────────────── -->
+<div id="step5" class="hidden">
+  <div class="card">
+    <div class="card-head">검토 요약</div>
+    <div class="card-body" id="summaryBody"></div>
+  </div>
+  <div style="text-align:center;margin-top:24px">
+    <button class="btn btn-primary" style="padding:14px 40px;font-size:15px" onclick="generate()">
+      ⬇ Order Card 생성 &amp; 다운로드
+    </button>
+    <button class="btn btn-outline" style="padding:8px 18px;font-size:12px;margin-left:12px;color:#888" onclick="debugCJ()">
+      🔍 CJ 염색료 진단
+    </button>
+  </div>
+  <div id="genStatus" style="text-align:center;margin-top:12px;font-size:13px;color:#666"></div>
+  <div id="cjDebugResult" style="margin-top:16px;display:none;font-size:12px;background:#f8f9fa;border:1px solid #ddd;border-radius:4px;padding:12px;text-align:left;white-space:pre-wrap;font-family:monospace;max-height:400px;overflow-y:auto"></div>
+  <div class="bottom-bar">
+    <button class="btn btn-outline" onclick="goTab(4)">← 이전</button>
+    <div></div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// ─── STATE (source of truth) ─────────────────────────────────────────────────
+// lines[i] = { po_no, style_no, color_code, color, qty, price, contrast_color }
+// styleInfos[i] = { remarks, sewing, body_fabric, body_weight, body_width,
+//                   acc_fabric, acc_weight, acc_width, yield_body, yield_acc }
+// styleInfos.length always === lines.length
+
+let lines = [];
+let styleInfos = [];
+let currentTab = 1;
+
+// ─── Section VII STATE ────────────────────────────────────────────────────────
+// sec7rows[i] = { loss_knit(%), fee_knit($/lb), loss_dye(%), fee_dye($/lb) } per slot (0~3)
+// Loss입력: % 단위 (4 = 4%), Excel에는 /100 해서 저장 (0.04)
+// sec7rows per 작지 (0~3)
+// loss_ext: K264~267(염색2 Loss), ext_type: L268~271(추가공정종류), fee_ext: K268~271 위치 아님 → L264~267
+// sec7rows[i]: 편직처별 Loss/가공임 (slot 0~3)
+let sec7rows = [0,1,2,3].map(() => ({
+  loss_knit:'', fee_knit:'',       // F264~267, F268~271
+  loss_knit2:'', fee_knit2:'',     // (편직처2 별도)
+  loss_knit3:'', fee_knit3:''      // (편직처3 별도)
+}));
+// dyeRows[slot][yarn_idx] = {yarn, color, loss_dye, fee_dye, loss_ext, ext_type, fee_ext}
+let dyeRows = [];
+function getH(yn) {
+  if (!yn) return '';
+  return yn.h_sel === '__direct__' ? (yn.h_custom || '') : (yn.h_sel || '');
+}
+
+function initDyeRows() {
+  dyeRows = slots.map((sl) =>
+    sl.yarns.filter(yn => getH(yn)).map(yn => ({
+      yarn: getH(yn), color:'DK',
+      loss_dye:'', fee_dye1:'', fee_dye2:'',
+      loss_ext:'', ext_type:'', fee_ext:''
+    }))
+  );
+}
+
+// ── dyeRows localStorage 저장/복원 ────────────────────────────────────────────
+function saveDyeRows() {
+  try { localStorage.setItem('oc_dyeRows', JSON.stringify(dyeRows)); } catch(e) {}
+}
+function loadDyeRows() {
+  try {
+    const s = localStorage.getItem('oc_dyeRows');
+    if (s) { const d = JSON.parse(s); if (Array.isArray(d) && d.length) { dyeRows = d; return true; } }
+  } catch(e) {}
+  return false;
+}
+// dyeRows 변경 시 저장 (renderSec7 onchange/oninput에서 호출)
+function saveDyeField(si, yi, field, val) {
+  if (dyeRows[si] && dyeRows[si][yi]) {
+    dyeRows[si][yi][field] = val;
+    saveDyeRows();
+  }
+}
+// 편직처/염색처 선택값 전역 저장 (DOM 읽기 타이밍 문제 방지)
+let sel_knitter1='KNITOPIA GUATEMALA, S.A.', sel_knitter2='', sel_knitter3='';
+let sel_dyehouse='C.R. TEXTIL, SOCIEDAD ANONIMA', sel_dyehouse2='', sel_dyehouse3='';
+// 원단 출고처 M268~271
+let fabricDelivery = ['','','',''];
+
+// ─── X. 원사가격 STATE ─────────────────────────────────────────────────────────
+let yarnPriceData = [];  // [{yarn_type, full_name, price}]
+
+// ─── XII. 원가계산 파라미터 STATE ─────────────────────────────────────────────
+let costParams = {
+  general_pct: '', commission_pct: '',
+  freight: '', test_fee: '',
+  duty: '', extra1: ''
+};
+
+// 염색처별 염색료 (Item List 시트)
+
+
+
+// ─── 작지별 원단 구성 STATE ───────────────────────────────────────────────────
+// 4 fixed slots: 작지1~4 (rows 194,209,224,239)
+const H_OPTIONS = [
+  '100% Cotton, 16/1 KPOE',
+  '60% Cotton 40% Polyester, 16/1 KPOE',
+  '90% Cotton 10% Polyester, 16/1 KPOE',
+  '60% Cotton 40% Polyester, 26/1 MVS',
+];
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function goTab(n) {
+  if (n === 3) { renderStyleCards(); renderJaktji(); }
+  if (n === 4) {
+    // 드롭다운 현재 선택값 전역변수에 동기화
+    sel_knitter1 = document.getElementById('s7_knitter1')?.value || '';
+    sel_knitter2 = document.getElementById('s7_knitter2')?.value || '';
+    sel_knitter3 = document.getElementById('s7_knitter3')?.value || '';
+    sel_dyehouse  = document.getElementById('s7_dyehouse')?.value  || '';
+    sel_dyehouse2 = document.getElementById('s7_dyehouse2')?.value || '';
+    sel_dyehouse3 = document.getElementById('s7_dyehouse3')?.value || '';
+    if (!dyeRows.length) initDyeRows();
+    renderSec7();
+  }
+  if (n === 5) renderSummary();
+  [1,2,3,4,5].forEach(i => {
+    const el = document.getElementById('step' + i);
+    const tab = document.getElementById('tab' + i);
+    if (el) el.classList.toggle('hidden', i !== n);
+    if (tab) tab.classList.toggle('active', i === n);
+  });
+  currentTab = n;
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function handleSel(selId, txtId) {
+  const sel = document.getElementById(selId);
+  const txt = document.getElementById(txtId);
+  if (sel.value === '__direct__') {
+    txt.classList.remove('hidden');
+    txt.focus();
+  } else {
+    txt.classList.add('hidden');
+    txt.value = '';
+  }
+}
+
+function gv(selId, txtId) {
+  const sel = document.getElementById(selId);
+  if (sel && sel.value === '__direct__') {
+    return (document.getElementById(txtId) || {value:''}).value.trim();
+  }
+  return sel ? sel.value : '';
+}
+
+function toggleDate(inputId, cbId) {
+  const cb = document.getElementById(cbId);
+  const inp = document.getElementById(inputId);
+  if (cb.checked) { inp.value = ''; inp.disabled = true; }
+  else { inp.disabled = false; }
+}
+
+function syncFileNo() {
+  // keep po-grid file_no consistent
+}
+
+function setDate(inputId, iso) {
+  if (!iso) return;
+  const inp = document.getElementById(inputId);
+  if (inp) inp.value = iso;
+}
+
+// ─── PO GRID ─────────────────────────────────────────────────────────────────
+function buildPoGrid() {
+  const g = document.getElementById('poGrid');
+  g.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.id = 'po_' + i;
+    inp.placeholder = 'PO #' + (i + 1);
+    g.appendChild(inp);
+  }
+}
+
+function getPoList() {
+  const list = [];
+  for (let i = 0; i < 16; i++) {
+    const v = (document.getElementById('po_' + i) || {value:''}).value.trim();
+    if (v) list.push(v);
+  }
+  return list;
+}
+
+function setPoGrid(poList) {
+  for (let i = 0; i < Math.min(poList.length, 16); i++) {
+    const inp = document.getElementById('po_' + i);
+    if (inp) inp.value = poList[i];
+  }
+}
+
+// ─── LINES TABLE ─────────────────────────────────────────────────────────────
+function addLine(data) {
+  const idx = lines.length;
+  lines.push({
+    po_no: data ? data.po_no || '' : '',
+    style_no: data ? data.style_no || '' : '',
+    color_code: data ? data.color_code || '' : '',
+    color: data ? data.color || '' : '',
+    qty: data ? data.qty || '' : '',
+    price: data ? (data.price !== undefined ? data.price : '') : '',
+    contrast_color: data ? data.contrast_color || 'N/A' : 'N/A',
+    fabric_code: data ? data.fabric_code || '' : ''
+  });
+  styleInfos.push({
+    remarks: data ? data.po_no || '' : '',
+    sewing: '',
+    body_fabric: data ? data.body_fabric || '' : '',
+    body_weight: data ? data.body_weight || '' : '',
+    body_width: data ? data.body_width || '' : '',
+    acc_fabric: data ? data.acc_fabric || '' : '',
+    acc_weight: data ? data.acc_weight || '' : '',
+    acc_width: data ? data.acc_width || '' : '',
+    yield_body: '',
+    yield_acc: ''
+  });
+  renderLines();
+}
+
+function removeLine(idx) {
+  lines.splice(idx, 1);
+  styleInfos.splice(idx, 1);
+  renderLines();
+}
+
+function updateLine(idx, field, value) {
+  if (lines[idx]) {
+    lines[idx][field] = value;
+    if (field === 'po_no' && styleInfos[idx]) {
+      styleInfos[idx].remarks = value;
+    }
+  }
+}
+
+function renderLines() {
+  const tbody = document.getElementById('linesTbody');
+  tbody.innerHTML = '';
+  lines.forEach((line, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:center;font-weight:700;color:#666">${idx+1}</td>
+      <td><input type="text" value="${esc(line.po_no)}" onchange="updateLine(${idx},'po_no',this.value)" placeholder="PO #"></td>
+      <td><input type="text" value="${esc(line.style_no)}" onchange="updateLine(${idx},'style_no',this.value)" placeholder="Style #"></td>
+      <td><input type="text" value="${esc(line.color_code)}" onchange="updateLine(${idx},'color_code',this.value)" placeholder="Color Code"></td>
+      <td><input type="text" value="${esc(line.color)}" onchange="updateLine(${idx},'color',this.value)" placeholder="Color Name"></td>
+      <td><input type="number" value="${esc(line.qty)}" onchange="updateLine(${idx},'qty',this.value)" placeholder="수량" style="width:70px"></td>
+      <td><input type="number" step="0.0001" value="${esc(line.price)}" onchange="updateLine(${idx},'price',this.value)" placeholder="U/Price" style="width:80px"></td>
+      <td><input type="text" value="${esc(line.contrast_color)}" onchange="updateLine(${idx},'contrast_color',this.value)" placeholder="N/A"></td>
+      <td><button class="del-btn" onclick="removeLine(${idx})">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function esc(v) {
+  return String(v || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ─── STYLE CARDS ─────────────────────────────────────────────────────────────
+// 1번 카드에서 전파할 필드 목록
+const PROPAGATE_FIELDS = ['sewing','body_width','acc_width','yield_body','yield_acc'];
+
+function renderStyleCards() {
+  const container = document.getElementById('styleCards');
+  container.innerHTML = '';
+  if (lines.length === 0) {
+    container.innerHTML = '<div class="alert alert-warn">오더 라인을 먼저 입력해주세요.</div>';
+    return;
+  }
+  lines.forEach((line, idx) => {
+    const si = styleInfos[idx] || {};
+    const title = [line.style_no, line.color].filter(Boolean).join(' ') || ('라인 ' + (idx+1));
+    const div = document.createElement('div');
+    div.className = 'style-card';
+
+    // 필드별 스타일: idx>0 이고 1번과 같은 값이면 grey
+    const si0 = styleInfos[0] || {};
+    const isGrey = (field, val) => idx > 0 && PROPAGATE_FIELDS.includes(field) && String(val||'') === String(si0[field]||'') && String(val||'') !== '';
+    const inp = (field, type, step, val, label) => {
+      const grey = isGrey(field, val);
+      const style = grey ? 'color:#aaa;' : '';
+      return `<div class="field">
+        <label>${label}</label>
+        <input type="${type}" step="${step}" value="${esc(val||'')}" style="${style}"
+          onchange="updateSIAndPropagate(${idx},'${field}',this.value,this)">
+      </div>`;
+    };
+
+    div.innerHTML = `
+      <div class="style-card-head">${idx+1}. ${esc(title)}</div>
+      <div class="style-card-body">
+        <div class="grid3">
+          <div class="field">
+            <label>Remarks (PO #)</label>
+            <input type="text" value="${esc(si.remarks||line.po_no||'')}" onchange="updateSI(${idx},'remarks',this.value)">
+          </div>
+          ${inp('sewing','number','0.01',si.sewing,'공임 (Sewing Charge, USD)')}
+          <div></div>
+          <div class="field">
+            <label>Body 원단명</label>
+            <input type="text" value="${esc(si.body_fabric||'')}" onchange="updateSI(${idx},'body_fabric',this.value)">
+          </div>
+          <div class="field">
+            <label>Body 중량 (g/m²)</label>
+            <input type="number" step="1" value="${esc(si.body_weight||'')}" onchange="updateSI(${idx},'body_weight',this.value)">
+          </div>
+          ${inp('body_width','number','0.5',si.body_width,'Body 원단폭 (inch)')}
+          <div class="field">
+            <label>Body 부속 원단명 (Rib 등)</label>
+            <input type="text" value="${esc(si.acc_fabric||'')}" onchange="updateSI(${idx},'acc_fabric',this.value)">
+          </div>
+          <div class="field">
+            <label>부속 중량 (g/m²)</label>
+            <input type="number" step="1" value="${esc(si.acc_weight||'')}" onchange="updateSI(${idx},'acc_weight',this.value)">
+          </div>
+          ${inp('acc_width','number','0.5',si.acc_width,'부속 원단폭 (inch)')}
+          ${inp('yield_body','number','0.001',si.yield_body,'Body 1 요척 (oz)')}
+          ${inp('yield_acc','number','0.001',si.yield_acc,'부속 1 요척 (Rib)')}
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function updateSI(idx, field, value) {
+  if (styleInfos[idx]) styleInfos[idx][field] = value;
+}
+
+// 전파 필드: idx=0이면 2번~마지막 카드에 같은 값 자동 복사 (아직 직접 수정 안 한 것만)
+function updateSIAndPropagate(idx, field, value, inputEl) {
+  if (!styleInfos[idx]) return;
+  styleInfos[idx][field] = value;
+  // 본인 입력창 색상 검정으로
+  if (inputEl) inputEl.style.color = '#222';
+
+  // idx=0이면 나머지 카드에 전파
+  if (idx === 0 && PROPAGATE_FIELDS.includes(field)) {
+    for (let i = 1; i < styleInfos.length; i++) {
+      // 이미 직접 수정했으면 전파 안 함 (si0 값과 다르면 직접 수정한 것)
+      const cur = String(styleInfos[i][field] || '');
+      const prev = String(styleInfos[0][field] || '');
+      // 이전 전파값(혹은 빈값)이면 덮어씌움
+      if (cur === '' || cur === prev || cur === value) {
+        styleInfos[i][field] = value;
+        // DOM에서 해당 input 찾아서 업데이트
+        const card = document.getElementById('styleCards').children[i];
+        if (card) {
+          const inputs = card.querySelectorAll('input');
+          inputs.forEach(inp => {
+            const oc = inp.getAttribute('onchange') || '';
+            if (oc.includes(`'${field}'`)) {
+              inp.value = value;
+              inp.style.color = '#aaa';
+            }
+          });
+        }
+      }
+    }
+  }
+}
+
+// ─── 작지별 원단 구성 ─────────────────────────────────────────────────────────
+// 4 fixed slots: 작지1(row194), 작지2(row209), 작지3(row224), 작지4(row239)
+// State: slots[0..3] = { g_val, h_sel, h_custom, j_val, m_val }
+// j_val = Excel J-column value (e.g. "SINGLE JERSEY 1", "1X1 RIB (TRIM)")
+// jOptionsFromRecap = [{label, j_val}] — built from order recap
+
+// Each slot: g_val (shared), yarns[3] each with h_sel/h_custom/j_val/m_val
+// J is auto-matched from H; M is per yarn in UI, but only yarn1's values go to Excel anchor
+let slots = [1,2,3,4].map(() => ({
+  g_val: '',
+  yarns: [
+    {h_sel:'', h_custom:'', j_val:'', m_val:'개폭(Open)'},
+    {h_sel:'', h_custom:'', j_val:'', m_val:'개폭(Open)'},
+    {h_sel:'', h_custom:'', j_val:'', m_val:'개폭(Open)'}
+  ]
+}));
+let jOptionsFromRecap = []; // [{label:'C1 JERSEY', j_val:'SINGLE JERSEY 1'}, ...]
+let hFiberToJBody = {}; // fiber → body J option (e.g. C2 JERSEY)
+let hFiberToJTrim = {}; // fiber → trim J option (e.g. C2 1X1 RIB)
+let hFiberToJ = {};     // kept for compat, same as body
+let recapFabSummary = ''; // display string for top panel
+
+const G_OPTIONS = ['Body1','Body2','Rib1','Rib2'];
+
+function autoMatchJ(hValue, gVal) {
+  if (!hValue || hValue === '__direct__') return null;
+  // Choose map based on G value: Rib1/Rib2 → trim map, Body1/Body2 → body map
+  const isRib = gVal && (gVal.toLowerCase().includes('rib'));
+  const map = isRib
+    ? (Object.keys(hFiberToJTrim).length ? hFiberToJTrim : hFiberToJ)
+    : (Object.keys(hFiberToJBody).length ? hFiberToJBody : hFiberToJ);
+  if (!Object.keys(map).length) return null;
+  const hLower = hValue.toLowerCase();
+  let matched = null, bestLen = 0;
+  for (const [fiberKey, jOpt] of Object.entries(map)) {
+    if (hLower.includes(fiberKey) && fiberKey.length > bestLen) {
+      matched = jOpt; bestLen = fiberKey.length;
+    }
+  }
+  return matched;
+}
+
+function renderJaktji() {
+  const container = document.getElementById('jaktjiCards');
+  container.innerHTML = '';
+
+  if (recapFabSummary) {
+    const panel = document.createElement('div');
+    panel.className = 'alert alert-info';
+    panel.style.marginBottom = '12px';
+    panel.style.fontSize = '12px';
+    panel.innerHTML = `<strong>📋 오더리캡 원단 정보:</strong><br>${recapFabSummary}`;
+    container.appendChild(panel);
+  }
+
+  slots.forEach((sl, i) => {
+    const div = document.createElement('div');
+    div.className = 'style-card';
+
+    const gOpts = [
+      `<option value="">-- 선택 --</option>`,
+      ...G_OPTIONS.map(v => `<option value="${esc(v)}" ${sl.g_val===v?'selected':''}>${esc(v)}</option>`)
+    ].join('');
+
+    const yarnRows = sl.yarns.map((yn, yi) => {
+      const hOpts = [
+        `<option value="">-- 선택 --</option>`,
+        ...H_OPTIONS.map(v => `<option value="${esc(v)}" ${yn.h_sel===v?'selected':''}>${esc(v)}</option>`),
+        `<option value="__direct__" ${yn.h_sel==='__direct__'?'selected':''}>직접 입력</option>`
+      ].join('');
+
+      const hVal = yn.h_sel === '__direct__' ? yn.h_custom : yn.h_sel;
+      const jMatch = yn.j_val ? jOptionsFromRecap.find(o => o.j_val===yn.j_val) : autoMatchJ(hVal, sl.g_val);
+      const jLabel = jMatch ? jMatch.label : '';
+      const jBadge = jLabel
+        ? `<span style="display:inline-block;font-size:11px;background:#d1ecf1;color:#0c5460;padding:2px 8px;border-radius:4px;margin-bottom:2px">${esc(jLabel)}</span>`
+        : `<span style="display:inline-block;font-size:11px;color:#bbb;padding:2px 8px;margin-bottom:2px">—</span>`;
+
+      const jOverrideOpts = [
+        `<option value="">-- J 수정 --</option>`,
+        ...jOptionsFromRecap.map(opt =>
+          `<option value="${esc(opt.j_val)}" ${yn.j_val===opt.j_val?'selected':''}>${esc(opt.label)}</option>`
+        )
+      ].join('');
+
+      return `
+        <div style="display:grid;grid-template-columns:44px 1fr 120px 100px;gap:6px;align-items:start;margin-top:8px;padding-top:8px;border-top:1px solid #eee">
+          <span style="font-size:11px;color:#666;font-weight:700;padding-top:7px">원단${yi+1}</span>
+          <div>
+            <select onchange="updateYarnH(${i},${yi},this.value)" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:6px 8px;font-size:12px;font-family:inherit">${hOpts}</select>
+            <input type="text" id="h_custom_${i}_${yi}" class="${yn.h_sel==='__direct__'?'':'hidden'}"
+              value="${esc(yn.h_custom)}" placeholder="원사명 직접 입력"
+              onchange="updateYarnHCustom(${i},${yi},this.value)"
+              style="margin-top:4px;width:100%;border:1px solid #ccc;border-radius:4px;padding:6px 8px;font-size:12px;font-family:inherit">
+          </div>
+          <div>
+            ${jBadge}
+            <select onchange="updateYarnJ(${i},${yi},this.value)" style="width:100%;border:1px solid #ddd;border-radius:4px;padding:3px 6px;font-size:11px;color:#555;font-family:inherit">${jOverrideOpts}</select>
+          </div>
+          <div>
+            <select onchange="updateYarnM(${i},${yi},this.value)" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:6px 8px;font-size:12px;font-family:inherit">
+              <option value="개폭(Open)" ${yn.m_val==='개폭(Open)'?'selected':''}>개폭(Open)</option>
+              <option value="Tub" ${yn.m_val==='Tub'?'selected':''}>Tub</option>
+              <option value="기타(Etc)" ${yn.m_val==='기타(Etc)'?'selected':''}>기타(Etc)</option>
+            </select>
+          </div>
+        </div>`;
+    }).join('');
+
+    div.innerHTML = `
+      <div class="style-card-head">작지${i+1}</div>
+      <div class="style-card-body">
+        <div class="field" style="max-width:220px;margin-bottom:4px">
+          <label>G열 — 원단 용도</label>
+          <select onchange="updateSlot(${i},'g_val',this.value)">${gOpts}</select>
+        </div>
+        <div style="display:grid;grid-template-columns:44px 1fr 120px 100px;gap:6px;font-size:11px;color:#888;padding-bottom:4px">
+          <span></span><span>H열 — 원사명</span><span>J열 (자동→수정가능)</span><span>M열</span>
+        </div>
+        ${yarnRows}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function updateSlot(idx, field, value) {
+  if (slots[idx]) slots[idx][field] = value;
+}
+
+function updateYarnH(idx, yi, value) {
+  slots[idx].yarns[yi].h_sel = value;
+  const matched = autoMatchJ(value, slots[idx].g_val);
+  if (matched) slots[idx].yarns[yi].j_val = matched.j_val;
+  renderJaktji();
+}
+
+function updateYarnHCustom(idx, yi, value) {
+  slots[idx].yarns[yi].h_custom = value;
+}
+
+function updateYarnJ(idx, yi, value) {
+  slots[idx].yarns[yi].j_val = value;
+  renderJaktji();
+}
+
+function updateYarnM(idx, yi, value) {
+  slots[idx].yarns[yi].m_val = value;
+}
+
+function getJajiList() {
+  return slots.map((sl, i) => {
+    const h_list = sl.yarns.map(yn => {
+      const h = yn.h_sel === '__direct__' ? yn.h_custom.trim() : yn.h_sel;
+      if (!h) return null;
+      const matched = autoMatchJ(yn.h_sel !== '__direct__' ? yn.h_sel : '', sl.g_val);
+      const j = yn.j_val || (matched ? matched.j_val : '');
+      return { h, j: j||'', m: yn.m_val||'개폭(Open)' };
+    }).filter(Boolean);
+    return {
+      slot:   i + 1,
+      g:      sl.g_val,
+      h_list,
+      j:      h_list.length ? h_list[0].j : '',
+      m:      h_list.length ? h_list[0].m : '개폭(Open)'
+    };
+  }).filter(s => s.g || s.h_list.length);
+}
+
+
+
+// ─── X. 원사 사종/가격 ────────────────────────────────────────────────────────
+function syncYarnPriceData() {
+  const seen = new Set();
+  const uniqueYarns = [];
+  for (const sl of slots) {
+    for (const yn of sl.yarns) {
+      const h = yn.h_sel === '__direct__' ? yn.h_custom.trim() : (yn.h_sel || '');
+      if (h && !seen.has(h)) { seen.add(h); uniqueYarns.push(h); }
+    }
+  }
+  // Merge: keep existing data, add new, remove obsolete
+  yarnPriceData = uniqueYarns.map(yt => {
+    const ex = yarnPriceData.find(d => d.yarn_type === yt);
+    return ex || { yarn_type: yt, full_name: '', price: '' };
+  });
+}
+
+function updateYarnPrice(idx, field, val) {
+  if (yarnPriceData[idx]) yarnPriceData[idx][field] = val;
+}
+
+// ─── ERP 원사 목록 (apparellinks.app ERP 기준) ────────────────────────────────
+const ERP_YARN_LIST = ["YA0001 - 10/1 100% COTTON KPRS", "YA0003 - 100D/96F 100% POLYESTER FILAMENT", "YA0009 - 16/1 100% COTTON CPRS", "YA0013 - 18/1 100% COTTON CPRS", "YA0014 - 18/1 100% COTTON KPOE", "YA0018 - 20/1 100% COTTON KPRS", "YA0020 - 20/1 100% COTTON CPRS", "YA0023 - 20/1 100% COTTON CPRS SLUB", "YA0027 - 20/1 50% COTTON / 50% POLYESTER KPRS CVC", "YA0038 - 20D 100% SPANDEX", "YA0040 - 24/1 100% COTTON CPRS", "YA0049 - 26/1 100% COTTON CPRS", "YA0050 - 26/1 100% SUPIMA COTTON CPRS", "YA0057 - 28/1 100% COTTON CPRS", "YA0059 - 30/1 100% COTTON KPRS", "YA0060 - 30/1 100% COTTON CPRS", "YA0062 - 30/1 100% COTTON CPRS SLUB-001", "YA0063 - 30/1 100% SUPIMA COTTON CPRS", "YA0070 - 30/1 100% RAYON KPRS", "YA0074 - 30/1 50% COTTON / 50% MODAL CPRS SLUB", "YA0077 - 30/1 50% COTTON / 50% POLYESTER KPRS CVC", "YA0078 - 30/1 50% COTTON / 50% POLYESTER KPRS SLUB CVC", "YA0083 - 30/1 50% POLYESTER / 37% COTTON / 13% RAYON KPRS TRIBLEND", "YA0091 - 30/1 60% COTTON / 40% POLYESTER KPRS CVC", "YA0094 - 30/1 70% COTTON / 30% POLYESTER CPRS 30% HEATHER GREY", "YA0095 - 30/1 70% COTTON / 30% POLYESTER CPRS CVC", "YA0105 - 30D 100% SPANDEX", "YA0106 - 32/1 100% COTTON CPRS", "YA0110 - 40/1 100% COTTON CPRS", "YA0111 - 40/1 100% COTTON CPRS SLUB-003", "YA0112 - 40/1 100% SUPIMA COTTON CPRS", "YA0115 - 40/1 100% POLYESTER KPRS", "YA0116 - 40/1 100% RAYON KPRS", "YA0138 - 40D 100% SPANDEX", "YA0141 - 50/1 100% COTTON CPRS", "YA0147 - 70D 100% SPANDEX", "YA0168 - 30/1 70% MODAL / 30% POLYESTER KPRS", "YA0170 - 20/1 100% COTTON KPOE", "YA0182 - 75D/72F 100% RECYCLED POLYESTER FILAMENT", "YA0246 - 40/1 60% COTTON / 40% POLYESTER CPRS CVC", "YA0256 - 60/1 100% COTTON CPRS", "YA0284 - 16/1 100% COTTON KPRS", "YA0328 - 30/1 50% COTTON / 50% POLYESTER KPRS CVC RECYCLED POLYESTER", "YA0353 - 30/1 100% COTTON CPRS SLUB-002 VINTAGE", "YA0356 - 32/1 52% MICROMODAL / 48% SUPIMA COTTON CPRS", "YA0359 - 30/1 75% COTTON / 25% MODAL CPRS SLUB", "YA0361 - 75D/70F 100% POLYESTER FILAMENT", "YA0365 - 75D/48F 100% POLYESTER FILAMENT", "YA0368 - 16/1 100% COTTON KPOE ", "YA0373 - 40/1 60% COTTON / 40% MODAL CPRS", "YA0374 - 30/1 60% COTTON / 40% MODAL CPRS", "YA0402 - 20/1 60% COTTON / 40% MODAL CPRS SLUB", "YA0412 - 40/1 100% MODAL KPRS", "YA0434 - 40/1 70% COTTON / 30% POLYESTER CPRS", "YA0449 - 20/1 100% COTTON KPOE (50% COTTON VIRGEN + 50% ALGODÓN RECYCLED)", "YA0462 - 40/1 100% COTTON CPRS SLUB-005", "YA0472 - 30/1 50% COTTON / 50% MODAL KPRS SLUB-020", "YA0498 - 40/1 60% COTTON / 40% POLYESTER CPRS (DV1345)", "YA0499 - 40/1 60% COTTON / 40% POLYESTER CPRS (DV06971C)", "YA0502 - 14/1 100% COTTON KPOE", "YA0511 - 175D/140F 100% RECYCLED POLYESTER FILAMENT", "YA0513 - 10/1 60% COTTON / 40% POLYESTER KPOE", "YA0522 - 100D/70F 100% POLYESTER FILAMENT", "YA0531 - 20/1 60% COTTON / 40% MODAL KPRS SLUB", "YA0532 - 30/1 100% COTTON CPRS COMPACT", "YA0533 - 30/1 90% COTTON / 10% POLYESTER CPRS 10% HEATHER GREY RECYCLED", "YA0536 - 30/1 97% COTTON / 3% POLYESTER CPRS 3% HEATHER GREY", "YA0538 - 20/1 60% COTTON / 40% RECYCLED POLYESTER KPRS", "YA0539 - 16/1 60% RECYCLED POLYESTER / 40% COTTON KPRS", "YA0543 - 24/1 60% COTTON / 40% POLYESTER KPRS CVC", "YA0548 - 30/1 100% COTTON CPRS MELANGE (B2347)", "YA0549 - 30/1 100% COTTON CPRS MELANGE (B2767)", "YA0551 - 40/1 100% REGENERATIVE COTTON CPRS (B85/ B85OCR)", "YA0552 - 40/1 100% REGENERATIVE COTTON CPRS (BC02 / BC02OCR)", "YA0553 - 24/1 100% COTTON CPRS (70% COTTON / 30% RECYCLED COTTON)", "YA0555 - 26/1 60% COTTON / 40% MODAL SLUB", "YA0556 - 30/1 100% COTTON CPRS SLUB-010", "YA0558 - 40/1 60% COTTON / 40% POLYESTER CPRS CVC SLUB-013", "YA0559 - 30/1 100% COTTON KPRS (80% COTTON / 20% RECYCLED COTTON)", "YA0560 - 20/1 50% COTTON / 50% POLYESTER KPRS CVC INTIMATE BLEND", "YA0561 - 30/1 50% COTTON / 50% POLYESTER KPRS CVC INTIMATE BLEND", "YA0563 - 30/1 60% COTTON / 40% POLYESTER KPRS CVC INTIMATE BLEND", "YA0564 - 30/1 50% POLYESTER / 37% COTTON / 13% RAYON KPRS TRIBLEND INTIMATE BLEND", "YA0566 - 20/2 100% COTTON CPRS", "YA0567 - 30/2 100% COTTON CPRS", "YA0568 - 30/1 60% COTTON / 40% MODAL CPRS SLUB", "YA0570 - 20/3 100% COTTON CPRS", "YA0571 - 40/1 85% RECYCLED POLYESTER / 15% RAYON KPRS", "YA0572 - 16/1 50% COTTON / 50% MODAL CPRS", "YA0573 - 26/1 60% COTTON / 40% POLYESTER KPRS MVS", "YA0574 - 30/1 55% RECYCLED COTTON / 45% RECYCLED POLYESTER KPOE", "YA0575 - 16/1 60% COTTON / 40% POLYESTER KPRS CVC", "YA0576 - 20/1 60% COTTON / 40% POLYESTER KPRS", "YA0577 - 32/1 60% COTTON / 40% POLYESTER KPRS CVC", "YA0578 - 40/2 100% COTTON CPRS", "YA0579 - 40/2 100% PIMA COTTON CPRS", "YA0580 - 30/1 50% COTTON / 50% RECYCLED POLYESTER KPRS CVC SLUB", "YA0581 - 10/2 60% COTTON / 40% POLYESTER KPOE", "YA0582 - 16/1 60% COTTON / 40% RECYCLED POLYESTER KPOE ", "YA0583 - 10/1 60% COTTON / 40% RECYCLED POLYESTER KPOE ", "YA0585 - 7/1 60% COTTON / 40% POLYESTER KPOE", "YA0587 - 40/1 60% COTTON / 40% MODAL CPRS + 70D/72F 100% POLYESTER FILAMENT", "YA0588 - 22/1 100% REGEN PIMA COTTON CPRS SLUB", "YA0589 - 34/1 100% REGEN PIMA COTTON CPRS SLUB (RAG&BONE)", "YA0590 - 36/1 100% REGEN PIMA COTTON CPRS SLUB", "YA0591 - 30/1 100% REGEN PIMA COTTON CPRS SLUB", "YA0592 - 16/1 60% COTTON / 40% POLYESTER KPOE CVC", "YA0593 - 16/1 90% COTTON / 10% POLYESTER KPOE 10% HEATHER GREY", "YA0594 - 20/1 100% COTTON KPOE (50% REGEN COTTON / 50% RECYCLED COTTON)", "YA0595 - 30/1 90% COTTON / 10% POLYESTER KPRS CVC", "YA0596 - 20/1 100% REGEN PIMA COTTON KPRS", "YA0597 - 22/1 100% COTTON CPRS SLUB (RAG&BONE)", "YA0598 - 34/1 100% COTTON CPRS SLUB", "YA0599 - 20/1 97% COTTON / 3% POLYESTER CPRS 3% HEATHER GREY", "YA0600 - 40/1 100% COTTON CPRS SLUB-ATM NEW PATTERN", "YA0601 - 20/1 100% COTTON CPRS SLUB-ATM NEW PATTERN", "YA0604 - 30/1 60% COTTON / 40% RECYCLED POLYESTER CPRS 1% HEATHER GREY", "YA0605 - 26/1 100% SUPIMA COTTON CPRS SLUB", "YA0607 - 50/1 80% COTTON / 20% RAYON CPRS", "YA0609 - 20/1 100% COTTON KPOE (80% VIRGEN COTTON + 20% RECYCLED COTTON)", "YA0610 - 20/1 100% COTTON KPRS (80% VIRGEN COTTON + 20% RECYCLED COTTON)", "YA0611 - 34/1 100% COTTON CPRS"];
+
+function filterERP(query) {
+  if (!query || query.length < 2) return [];
+  const q = query.toUpperCase();
+  return ERP_YARN_LIST.filter(y => y.toUpperCase().includes(q)).slice(0, 12);
+}
+
+function autoFilterERP(yarnType) {
+  // 번수 추출 (16/1, 30/1, 20/1 등)
+  const countMatch = yarnType.match(/(\d+\/\d+)/);
+  const count = countMatch ? countMatch[1] : '';
+  // 사종 키워드 추출
+  const yt = yarnType.toUpperCase();
+  const keywords = [];
+  if (count) keywords.push(count);
+  if (yt.includes('100%') && yt.includes('COTTON') && !yt.includes('40%') && !yt.includes('10%')) {
+    keywords.push('100%'); keywords.push('COTTON');
+    if (yt.includes('KPOE')) keywords.push('KPOE');
+  } else if (yt.includes('60%') && yt.includes('40%')) {
+    keywords.push('60%'); keywords.push('40%');
+    if (yt.includes('KPOE')) keywords.push('KPOE');
+  } else if (yt.includes('90%') && yt.includes('10%')) {
+    keywords.push('90%'); keywords.push('10%');
+    if (yt.includes('KPOE')) keywords.push('KPOE');
+  } else {
+    // 일반: 단어 분리해서 키워드 추출
+    yarnType.split(/[\s,]+/).forEach(w => { if(w.length>2) keywords.push(w.toUpperCase()); });
+  }
+  if (!keywords.length) return ERP_YARN_LIST.slice(0, 10);
+  // 매칭 점수: 키워드 포함 개수 기준 정렬
+  const scored = ERP_YARN_LIST.map(y => {
+    const yu = y.toUpperCase();
+    const score = keywords.filter(k => yu.includes(k)).length;
+    return {y, score};
+  }).filter(r => r.score > 0).sort((a,b) => b.score - a.score);
+  const results = scored.map(r => r.y).slice(0, 8);
+  results.push('── 키워드 검색 ──');  // 수동 검색 구분선
+  return results;
+}
+
+let _erpDropIdx = -1;  // 현재 autocomplete 열린 row index
+function showERPDropAuto(i, inputEl, yarnType) {
+  // 입력값이 없으면 yarn_type 기반 자동 필터, 있으면 키워드 검색
+  if (inputEl.value.length < 2) {
+    showERPDropWithList(i, inputEl, autoFilterERP(yarnType));
+  } else {
+    showERPDrop(i, inputEl);
+  }
+}
+
+function showERPDropWithList(i, inputEl, matches) {
+  hideERPDrop();
+  _erpDropIdx = i;
+  if (!matches.length) return;
+  const rect = inputEl.getBoundingClientRect();
+  const drop = document.createElement('div');
+  drop.id = 'erp-autocomplete';
+  drop.style.cssText = `position:fixed;z-index:99999;background:#fff;border:1px solid #c8860a;border-radius:4px;
+    box-shadow:0 4px 16px rgba(0,0,0,.2);max-height:220px;overflow-y:auto;width:${rect.width}px;
+    top:${rect.bottom + 2}px;left:${rect.left}px;font-size:12px`;
+  matches.forEach(m => {
+    const div = document.createElement('div');
+    div.textContent = m;
+    const isSep = m.startsWith('──');
+    div.style.cssText = isSep
+      ? 'padding:5px 10px;color:#999;font-size:11px;background:#f8f8f8;border-top:1px solid #eee;cursor:default'
+      : 'padding:7px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    if (!isSep) {
+      div.addEventListener('mousedown', e => {
+        e.preventDefault();
+        updateYarnPrice(i, 'full_name', m);
+        inputEl.value = m;
+        hideERPDrop();
+      });
+      div.addEventListener('mouseover', () => div.style.background='#fef3e2');
+      div.addEventListener('mouseout', () => div.style.background='');
+    } else {
+      // 키워드 검색 구분선 클릭 → 입력창 포커스 유지해서 직접 입력
+      div.addEventListener('mousedown', e => { e.preventDefault(); inputEl.focus(); hideERPDrop(); });
+    }
+    drop.appendChild(div);
+  });
+  document.body.appendChild(drop);
+}
+
+function showERPDrop(i, inputEl) {
+  hideERPDrop();
+  _erpDropIdx = i;
+  const q = inputEl.value;
+  const matches = q.length >= 2 ? filterERP(q) : ERP_YARN_LIST.slice(0, 10);
+  if (!matches.length) return;
+  const rect = inputEl.getBoundingClientRect();
+  const drop = document.createElement('div');
+  drop.id = 'erp-autocomplete';
+  drop.style.cssText = `position:fixed;z-index:99999;background:#fff;border:1px solid #c8860a;border-radius:4px;
+    box-shadow:0 4px 16px rgba(0,0,0,.2);max-height:220px;overflow-y:auto;width:${rect.width}px;
+    top:${rect.bottom + 2}px;left:${rect.left}px;font-size:12px`;
+  matches.forEach(m => {
+    const div = document.createElement('div');
+    div.textContent = m;
+    div.style.cssText = 'padding:7px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    div.addEventListener('mousedown', e => {
+      e.preventDefault();
+      updateYarnPrice(i, 'full_name', m);
+      inputEl.value = m;
+      hideERPDrop();
+    });
+    div.addEventListener('mouseover', () => div.style.background='#fef3e2');
+    div.addEventListener('mouseout', () => div.style.background='');
+    drop.appendChild(div);
+  });
+  document.body.appendChild(drop);
+}
+function hideERPDrop() {
+  const old = document.getElementById('erp-autocomplete');
+  if (old) old.remove();
+  _erpDropIdx = -1;
+}
+
+function scrollToExtIfLast(si, yi) {
+  // fee_dye2에 값이 있으면 추가공정 영역으로 스크롤
+  const row = dyeRows[si] && dyeRows[si][yi];
+  const val = row ? row.fee_dye2 : '';
+  if (val !== '' && val !== undefined && val !== null) {
+    const tbl = document.getElementById('sec7Table');
+    if (tbl) setTimeout(() => { tbl.scrollLeft = tbl.scrollWidth; }, 100);
+  }
+}
+
+function moveLossDown(si, yi) {
+  // 1) 다음 요소의 si/yi 저장
+  const allInputs = Array.from(document.querySelectorAll('input[data-loss-si]'));
+  const cur = allInputs.find(el => el.dataset.lossSi == si && el.dataset.lossYi == yi);
+  if (!cur) return;
+  const nextEl = allInputs[allInputs.indexOf(cur) + 1];
+  if (!nextEl) return;
+  const nextSi = +nextEl.dataset.lossSi;
+  const nextYi = +nextEl.dataset.lossYi;
+  // 2) onchange→renderSec7() DOM 재빌드 후 재탐색해서 포커스
+  setTimeout(() => {
+    const fresh = Array.from(document.querySelectorAll('input[data-loss-si]'));
+    const t = fresh.find(el => +el.dataset.lossSi === nextSi && +el.dataset.lossYi === nextYi);
+    if (t) { t.focus(); t.select(); }
+  }, 80);
+}
+
+function renderYarnPrices() {
+  syncYarnPriceData();
+  const el = document.getElementById('yarnPriceSection');
+  if (!el) return;
+  if (yarnPriceData.length === 0) {
+    el.innerHTML = '<div style="color:#888;font-size:12px">④ 작지 원단 구성에서 원사를 먼저 선택해주세요</div>';
+    return;
+  }
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:#f0f4f8">
+      <th style="padding:7px 10px;border:1px solid #ddd;text-align:left;min-width:200px">원사 타입 (자동)</th>
+      <th style="padding:7px 10px;border:1px solid #ddd;text-align:left">
+        ERP 사종명 검색 (Main O열)
+        <span style="font-weight:400;font-size:10px;color:#888;margin-left:6px">— 2자 이상 입력 시 ERP 목록에서 자동완성</span>
+      </th>
+      <th style="padding:7px 10px;border:1px solid #ddd;width:130px;text-align:left">원사 가격 $/lb (E290~)</th>
+    </tr></thead><tbody>`;
+  for (let i = 0; i < yarnPriceData.length; i++) {
+    const d = yarnPriceData[i];
+    html += `<tr>
+      <td style="padding:6px 10px;border:1px solid #eee;background:#fafafa;color:#444;font-size:11px">${esc(d.yarn_type)}</td>
+      <td style="padding:4px 6px;border:1px solid #eee;position:relative">
+        <input type="text" id="ypd_name_${i}" value="${esc(d.full_name)}"
+          placeholder="예: YA0368 - 16/1 100% COTTON KPOE"
+          oninput="updateYarnPrice(${i},'full_name',this.value);showERPDrop(${i},this)"
+          onblur="setTimeout(hideERPDrop,200)"
+          onfocus="showERPDropAuto(${i},this,d.yarn_type)"
+          style="width:100%;border:1px solid #ccc;border-radius:3px;padding:5px 8px;font-size:12px;font-family:inherit">
+      </td>
+      <td style="padding:4px 6px;border:1px solid #eee">
+        <input type="number" step="0.01" value="${esc(d.price)}" placeholder="0.00"
+          oninput="updateYarnPrice(${i},'price',this.value)"
+          style="width:100%;border:1px solid #ccc;border-radius:3px;padding:5px 8px;font-size:12px;font-family:inherit">
+      </td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderSec7() {
+  // localStorage에서 복원 시도 (새로고침 후에도 유지)
+  if (!dyeRows.some(s => s && s.length > 0)) loadDyeRows();
+  // slots 변경시 dyeRows sync (yarn 추가/제거 반영)
+  slots.forEach((sl, si) => {
+    const filtered = sl.yarns.filter(yn => getH(yn));
+    if (!dyeRows[si] || dyeRows[si].length !== filtered.length) {
+      dyeRows[si] = filtered.map((yn, yi) => {
+        const existing = dyeRows[si] && dyeRows[si][yi];
+        return existing || {yarn:getH(yn),color:'DK',loss_dye:'',fee_dye1:'',fee_dye2:'',loss_ext:'',ext_type:'',fee_ext:''};
+      });
+    }
+  });
+  const table = document.getElementById('sec7Table');
+  if (!table) return;
+
+  // 전역변수에서 읽기 (DOM 타이밍 문제 방지)
+  const k1 = sel_knitter1;
+  const k2 = sel_knitter2;
+  const k3 = sel_knitter3;
+  const dh1 = sel_dyehouse;
+  const dh2 = sel_dyehouse2;
+  const dh3 = sel_dyehouse3;
+
+  // 스타일 상수
+  const CSS = {
+    thBase: 'background:#1e2d52;color:#fff;font-weight:500;padding:6px 10px;font-size:12px;text-align:center;border:0.5px solid rgba(255,255,255,0.15)',
+    thK1:   'background:#1e4a7a;color:#fff;font-weight:500;padding:6px 10px;font-size:12px;text-align:center;border:0.5px solid rgba(255,255,255,0.15)',
+    thKna:  'background:#b0b0b0;color:#777;padding:6px 10px;font-size:12px;text-align:center;border:0.5px solid rgba(255,255,255,0.15)',
+    thD1:   'background:#1e4a7a;color:#fff;font-weight:500;padding:6px 10px;font-size:12px;text-align:center;border:0.5px solid rgba(255,255,255,0.15)',
+    thExt:  'background:#1a3a5c;color:#8bc0e8;font-weight:500;padding:6px 10px;font-size:12px;text-align:center;border:0.5px solid rgba(255,255,255,0.15);border-left:2px solid #4a90d9',
+    thDna:  'background:#c0c0c0;color:#777;padding:6px 10px;font-size:12px;text-align:center;border:0.5px solid rgba(255,255,255,0.15)',
+    thEna:  'background:#b8b8b8;color:#888;padding:6px 10px;font-size:12px;text-align:center;border:0.5px solid rgba(255,255,255,0.15);border-left:1px dashed #aaa',
+    thOut:  'background:#2c4a2c;color:#9d9;font-weight:500;padding:6px 10px;font-size:12px;text-align:center;border:0.5px solid rgba(255,255,255,0.15);border-left:2px solid #5a9',
+    tdLabel:'padding:7px 10px;border:0.5px solid var(--color-border-tertiary,#e0e0e0);background:var(--color-background-secondary,#f5f5f5);text-align:left;vertical-align:top',
+    tdK1:   'padding:6px 8px;border:0.5px solid var(--color-border-tertiary,#e0e0e0);background:var(--color-background-primary,#fff);text-align:center;vertical-align:middle',
+    tdKna:  'padding:6px 8px;border:0.5px solid var(--color-border-tertiary,#e0e0e0);background:#f4f4f4;text-align:center;color:#ccc;font-size:13px',
+    tdD1:   'padding:6px 8px;border:0.5px solid var(--color-border-tertiary,#e0e0e0);background:var(--color-background-primary,#fff);text-align:center;vertical-align:middle',
+    tdExt:  'padding:6px 8px;border:0.5px solid var(--color-border-tertiary,#e0e0e0);background:#f5f9ff;text-align:center;vertical-align:middle;border-left:2px solid #4a90d9',
+    tdDna:  'padding:6px 8px;border:0.5px solid var(--color-border-tertiary,#e0e0e0);background:#f2f2f2;text-align:center;color:#bbb;font-size:13px',
+    tdEna:  'padding:6px 8px;border:0.5px solid var(--color-border-tertiary,#e0e0e0);background:#efefef;text-align:center;color:#bbb;font-size:13px;border-left:1px dashed #ccc',
+    tdOut:  'padding:6px 8px;border:0.5px solid var(--color-border-tertiary,#e0e0e0);background:#f4fff4;text-align:center;vertical-align:middle;border-left:2px solid #5a9',
+    inN:    'width:60px;text-align:center;border:0.5px solid #bbb;border-radius:3px;padding:4px 5px;font-size:12px',
+    inG:    'width:60px;text-align:center;border:0.5px solid #ddd;border-radius:3px;padding:4px 5px;font-size:12px;background:#f5f5f5;color:#aaa',
+    inNA:   'width:60px;text-align:center;border:0.5px solid #e0e0e0;border-radius:3px;padding:4px 5px;font-size:12px;background:#ececec;color:#ccc',
+    selN:   'min-width:120px;width:100%;border:0.5px solid #bbb;border-radius:3px;padding:4px 5px;font-size:12px',
+    selG:   'min-width:120px;width:100%;border:0.5px solid #ddd;border-radius:3px;padding:4px 5px;font-size:12px;background:#f5f5f5;color:#aaa',
+    selNA:  'min-width:80px;width:100%;border:0.5px solid #e0e0e0;border-radius:3px;padding:4px 5px;font-size:12px;background:#ececec;color:#ccc',
+    pct:    'font-size:11px;color:#888',
+  };
+
+  // 첫 슬롯 첫 행 기준 자동복사
+  function kv(field, si) {
+    if (sec7rows[si][field] !== '') return {v:sec7rows[si][field], gray:false};
+    if (sec7rows[0][field] !== '') return {v:sec7rows[0][field], gray:true};
+    return {v:'', gray:false};
+  }
+  function dv(si, yi, field) {
+    if (!dyeRows[si] || !dyeRows[si][yi]) return {v:'', gray:false};
+    const v = dyeRows[si][yi][field];
+    if (v !== '') return {v, gray:false};
+    if (dyeRows[0] && dyeRows[0][0] && dyeRows[0][0][field] !== '') return {v:dyeRows[0][0][field], gray:true};
+    return {v:'', gray:false};
+  }
+
+  function mkInp(field, si, stateSrc, gray, pct, naMode) {
+    if (naMode) return `<input style="${CSS.inNA}" disabled placeholder="—">`;
+    const st = gray ? CSS.inG : CSS.inN;
+    return `<input type="text" inputmode="decimal" value="${stateSrc}" style="${st}"
+      data-gray="${gray?1:0}"
+      onfocus="if(this.dataset.gray==='1'){this.value='';this.dataset.gray='0';this.style.cssText='${CSS.inN}'}"
+      onchange="(function(){${field}})()"
+    >${pct?`<span style="${CSS.pct}">%</span>`:''}`;
+  }
+
+  function mkKInp(field, si, kIdx) {
+    const fld = field + (kIdx===1?'':kIdx);
+    const enabled = kIdx===1 ? !!k1 : kIdx===2 ? !!k2 : !!k3;
+    if (!enabled) return `<td style="${CSS.tdKna}">—</td>`;
+    const g = kv(fld, si);
+    const st = g.gray ? CSS.inG : CSS.inN;
+    const isLoss = field === 'loss_knit';
+    return `<td style="${CSS.tdK1}"><input type="text" inputmode="decimal" value="${g.v}"
+      style="${st}" data-gray="${g.gray?1:0}"
+      onfocus="if(this.dataset.gray==='1'){this.value='';sec7rows[${si}]['${fld}']='';this.dataset.gray='0';this.style.cssText='${CSS.inN}'}"
+      onchange="sec7rows[${si}]['${fld}']=this.value;renderSec7()"
+    >${isLoss?`<span style="${CSS.pct}">%</span>`:''}</td>`;
+  }
+
+  // ── 편직 테이블 ──────────────────────────────────────────────────────────
+  const knitRows = slots.map((sl, si) => {
+    const yarns = sl.yarns.filter(y => getH(y));
+    const rowCount = Math.max(yarns.length, 1);
+    return yarns.map((yn, yi) => {
+      const isFirst = yi === 0;
+      const labelCell = isFirst
+        ? `<td style="${CSS.tdLabel}" rowspan="${rowCount}">
+            <div style="font-weight:500;font-size:13px">${esc(sl.g_val||`작지${si+1}`)}</div>
+            ${yarns.map(y=>`<div style="font-size:11px;color:#888;margin-top:2px">${esc(getH(y))}</div>`).join('')}
+           </td>` : '';
+      return `<tr style="border-top:${isFirst&&si>0?'1.5px solid var(--color-border-secondary,#ccc)':'none'}">
+        ${labelCell}
+        ${mkKInp('loss_knit', si, 1)}
+        ${mkKInp('fee_knit', si, 1)}
+        ${mkKInp('loss_knit', si, 2)}
+        ${mkKInp('fee_knit', si, 2)}
+        ${mkKInp('loss_knit', si, 3)}
+        ${mkKInp('fee_knit', si, 3)}
+      </tr>`;
+    }).join('');
+  }).join('');
+
+  const knitHtml = `
+  <div style="font-weight:500;font-size:12px;color:#2c3e6b;margin-bottom:6px">편직 Loss / 가공임</div>
+  <div style="overflow-x:auto;margin-bottom:20px">
+  <table style="border-collapse:collapse;min-width:800px;width:100%">
+    <thead>
+      <tr>
+        <th style="${CSS.thBase};text-align:left;min-width:200px" rowspan="2">원단 (작지) / 원사</th>
+        <th colspan="2" style="${k1?CSS.thK1:CSS.thKna}">${k1?`편직처1 — ${esc(k1)}`:'편직처1 — 해당없음'}</th>
+        <th colspan="2" style="${k2?CSS.thK1:CSS.thKna}">${k2?`편직처2 — ${esc(k2)}`:'편직처2 — 해당없음'}</th>
+        <th colspan="2" style="${k3?CSS.thK1:CSS.thKna}">${k3?`편직처3 — ${esc(k3)}`:'편직처3 — 해당없음'}</th>
+      </tr>
+      <tr>
+        <th style="${k1?CSS.thK1:CSS.thKna}">Loss%</th><th style="${k1?CSS.thK1:CSS.thKna}">가공임$/lb</th>
+        <th style="${k2?CSS.thK1:CSS.thKna}">Loss%</th><th style="${k2?CSS.thK1:CSS.thKna}">가공임$/lb</th>
+        <th style="${k3?CSS.thK1:CSS.thKna}">Loss%</th><th style="${k3?CSS.thK1:CSS.thKna}">가공임$/lb</th>
+      </tr>
+    </thead>
+    <tbody>${knitRows}</tbody>
+  </table></div>`;
+
+  // ── 염색 테이블 ──────────────────────────────────────────────────────────
+  const EXT_OPTS = `<option value="해당없음">해당없음</option><option value="Enzyme">Enzyme</option><option value="Brushing(Felpado)(기모)">Brushing(Felpado)(기모)</option><option value="Spray Tumble">Spray Tumble</option><option value="Fabric Print">Fabric Print</option><option value="Fabric Burnout">Fabric Burnout</option><option value="Spray Net Dry">Spray Net Dry</option><option value="Pre-Setting">Pre-Setting</option><option value="Tenter/Compact">Tenter/Compact</option><option value="없음">없음</option>`;
+  const COLOR_OPTS = `<option value="DK">DK</option><option value="MD">MD</option><option value="LT">LT</option><option value="DK+과수표백">DK+과수표백</option><option value="MD+과수표백">MD+과수표백</option><option value="LT+과수표백">LT+과수표백</option>`;
+
+  function mkDyeCell(si, yi, dhIdx, dhVal, isFirst, rowCount) {
+    const enabled = !!dhVal;
+    // 원사 select 옵션
+    const yarnList = slots[si]?.yarns.map(y=>getH(y)).filter(Boolean) || [];
+    const curYarn = (dyeRows[si]&&dyeRows[si][yi]) ? dyeRows[si][yi].yarn || yarnList[yi]||'' : '';
+    const yarnOpts = yarnList.map(y=>`<option value="${esc(y)}" ${curYarn===y?'selected':''}>${esc(y)}</option>`).join('');
+    const d = (si2,yi2,field) => { const r=dyeRows[si2]&&dyeRows[si2][yi2]; return r?r[field]||'':''; };
+    const isGray = (field) => {
+      const v = d(si,yi,field);
+      if (v!=='') return false;
+      if (si===0&&yi===0) return false;
+      return d(0,0,field)!=='';
+    };
+    const gv2 = (field) => { const v=d(si,yi,field); return v!==''?v:d(0,0,field); };
+
+    if (!enabled) {
+      // 해당없음: 항목은 표시, 비활성
+      return `
+        <td style="${CSS.tdDna}"><select style="${CSS.selNA}" disabled><option>—</option></select></td>
+        <td style="${CSS.tdDna}"><select style="${CSS.selNA}" disabled><option>—</option></select></td>
+        <td style="${CSS.tdDna}"><input style="${CSS.inNA}" disabled placeholder="—"></td>
+        <td style="${CSS.tdDna}"><input style="${CSS.inNA}" disabled placeholder="—"></td>
+        <td style="${CSS.tdDna}"><input style="${CSS.inNA}" disabled placeholder="—"></td>
+        <td style="${CSS.tdEna}"><input style="${CSS.inNA}" disabled placeholder="—"></td>
+        <td style="${CSS.tdEna}"><select style="${CSS.selNA}" disabled><option>—</option></select></td>
+        <td style="${CSS.tdEna}"><input style="${CSS.inNA}" disabled placeholder="—"></td>`;
+    }
+    const gray = isGray('loss_dye');
+    const inSt = (f) => isGray(f) ? CSS.inG : CSS.inN;
+    const selSt = (f) => isGray(f) ? CSS.selG : CSS.selN;
+    const onChg = (field) => `dyeRows[${si}][${yi}]['${field}']=this.value;saveDyeRows();renderSec7()`;
+    const onFocus = (field,defSt) => `if(this.dataset.gray==='1'){this.value='';dyeRows[${si}][${yi}]['${field}']='';this.dataset.gray='0';this.style.cssText='${defSt}'}`;
+
+    // ext_type select
+    const extVal = gv2('ext_type');
+    const extOpts = EXT_OPTS.replace(`value="${extVal}"`,`value="${extVal}" selected`);
+    const colorVal = gv2('color')||'DK';
+    const colorOpts = COLOR_OPTS.replace(`value="${colorVal}"`,`value="${colorVal}" selected`);
+
+    // 과수표백 포함 색상이면 염색료2도 활성
+    const isBaek = colorVal.includes('과수표백');
+    const fee2Style = isBaek ? inSt('fee_dye2') : (CSS.inNA);
+    const fee2Disabled = isBaek ? '' : 'disabled';
+
+    return `
+      <td style="${CSS.tdD1};min-width:150px"><select style="min-width:140px;width:100%;border:0.5px solid #bbb;border-radius:3px;padding:4px 5px;font-size:12px" onchange="dyeRows[${si}][${yi}].yarn=this.value">${yarnOpts}</select></td>
+      <td style="${CSS.tdD1}"><select style="${CSS.selN}" onchange="dyeRows[${si}][${yi}].color=this.value;renderSec7()">${colorOpts}</select></td>
+      <td style="${CSS.tdD1}"><input type="text" inputmode="decimal" value="${gv2('loss_dye')}"
+        style="${inSt('loss_dye')}" data-gray="${isGray('loss_dye')?1:0}"
+        data-loss-si="${si}" data-loss-yi="${yi}"
+        onfocus="${onFocus('loss_dye',CSS.inN)}"
+        onchange="${onChg('loss_dye')}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();moveLossDown(${si},${yi});}"
+      ><span style="${CSS.pct}">%</span></td>
+      <td style="${CSS.tdD1}"><input type="text" inputmode="decimal" value="${gv2('fee_dye1')}"
+        style="${inSt('fee_dye1')}" data-gray="${isGray('fee_dye1')?1:0}"
+        onfocus="${onFocus('fee_dye1',CSS.inN)}"
+        oninput="dyeRows[${si}][${yi}]['fee_dye1']=this.value;saveDyeRows()"
+        onchange="${onChg('fee_dye1')}"
+      ></td>
+      <td style="${CSS.tdD1}"><input type="text" inputmode="decimal" value="${isBaek?gv2('fee_dye2'):''}"
+        style="${fee2Style}" ${fee2Disabled}
+        data-gray="${isGray('fee_dye2')?1:0}"
+        onfocus="${onFocus('fee_dye2',CSS.inN)}"
+        oninput="dyeRows[${si}][${yi}]['fee_dye2']=this.value;saveDyeRows()"
+        onchange="${onChg('fee_dye2')}"
+        onblur="scrollToExtIfLast(${si},${yi})"
+        placeholder="${isBaek?'':'—'}"
+      ></td>
+      <td style="${CSS.tdExt}"><input type="text" inputmode="decimal" value="${gv2('loss_ext')}"
+        style="${inSt('loss_ext')}" data-gray="${isGray('loss_ext')?1:0}"
+        onfocus="${onFocus('loss_ext',CSS.inN)}"
+        onchange="${onChg('loss_ext')}"
+      ><span style="${CSS.pct}">%</span></td>
+      <td style="${CSS.tdExt}"><select style="${selSt('ext_type')}" data-gray="${isGray('ext_type')?1:0}"
+        onfocus="this.dataset.gray='0';this.style.cssText='${CSS.selN}'"
+        onchange="${onChg('ext_type')}">${extOpts}</select></td>
+      <td style="${CSS.tdExt}"><input type="text" inputmode="decimal" value="${gv2('fee_ext')}"
+        style="${inSt('fee_ext')}" data-gray="${isGray('fee_ext')?1:0}"
+        onfocus="${onFocus('fee_ext',CSS.inN)}"
+        onchange="${onChg('fee_ext')}"
+      ></td>`;
+  }
+
+  const dyeRowsHtml = slots.map((sl, si) => {
+    const yarns = sl.yarns.filter(y => getH(y));
+    const rowCount = Math.max(yarns.length, 1);
+    if (!dyeRows[si]) dyeRows[si] = yarns.map(yn=>({yarn:getH(yn),color:'DK',loss_dye:'',fee_dye1:'',fee_dye2:'',loss_ext:'',ext_type:'',fee_ext:''}));
+    return yarns.map((yn, yi) => {
+      const isFirst = yi === 0;
+      const topBorder = isFirst && si > 0 ? 'border-top:1.5px solid var(--color-border-secondary,#ccc)' : '';
+      const labelCell = isFirst
+        ? `<td style="${CSS.tdLabel};${topBorder}" rowspan="${rowCount}">
+            <div style="font-weight:500;font-size:13px">${esc(sl.g_val||`작지${si+1}`)}</div>
+            ${yarns.map(y=>`<div style="font-size:11px;color:#888;margin-top:2px">${esc(getH(y))}</div>`).join('')}
+           </td>` : '';
+      return `<tr style="${topBorder}">
+        ${labelCell}
+        ${mkDyeCell(si,yi,1,dh1,isFirst,rowCount)}
+        ${mkDyeCell(si,yi,2,dh2,isFirst,rowCount)}
+        ${mkDyeCell(si,yi,3,dh3,isFirst,rowCount)}
+      </tr>`;
+    }).join('');
+  }).join('');
+
+  function dhTh(dhVal, colspan, isExt) {
+    if (isExt) return `<th colspan="${colspan}" style="${dhVal?CSS.thExt:CSS.thEna}">염색 추가공정</th>`;
+    return `<th colspan="${colspan}" style="${dhVal?CSS.thD1:CSS.thDna}">${dhVal?`염색처 — ${esc(dhVal)}`:'해당없음'}</th>`;
+  }
+  // dhTh 호출 시 염색 colspan = 5 (원사/색상/Loss/염색료1/염색료2)
+  function dhSubTh(dhVal, labels, styles) {
+    return labels.map((l,i)=>`<th style="${dhVal?styles[i]:CSS.thDna}">${l}</th>`).join('');
+  }
+
+  const dyeHtml = `
+  <div style="font-weight:500;font-size:12px;color:#2c3e6b;margin-bottom:6px">염색 Loss / 염색료 / 추가공정</div>
+  <div style="overflow-x:auto">
+  <table style="border-collapse:collapse;width:100%;min-width:1400px">
+    <thead>
+      <tr>
+        <th style="${CSS.thBase};text-align:left;min-width:200px" rowspan="3">원단 (작지) / 원사</th>
+        ${dhTh(dh1,5,false)}${dhTh(dh1,3,true)}
+        ${dhTh(dh2,5,false)}${dhTh(dh2,3,true)}
+        ${dhTh(dh3,5,false)}${dhTh(dh3,3,true)}
+
+      </tr>
+      <tr>
+        <th colspan="5" style="${dh1?CSS.thD1:CSS.thDna}">염색</th>
+        <th colspan="3" style="${dh1?CSS.thExt:CSS.thEna}">추가공정</th>
+        <th colspan="5" style="${dh2?CSS.thD1:CSS.thDna}">염색</th>
+        <th colspan="3" style="${dh2?CSS.thExt:CSS.thEna}">추가공정</th>
+        <th colspan="5" style="${dh3?CSS.thD1:CSS.thDna}">염색</th>
+        <th colspan="3" style="${dh3?CSS.thExt:CSS.thEna}">추가공정</th>
+      </tr>
+      <tr>
+        ${dhSubTh(dh1,['원사(Yarn)','색상','Loss%','염색료 1 $/lb','염색료 2 $/lb'],[CSS.thD1,CSS.thD1,CSS.thD1,CSS.thD1,CSS.thD1])}
+        ${dhSubTh(dh1,['Loss%','종류','가공임$/lb'],[CSS.thExt,CSS.thExt,CSS.thExt])}
+        ${dhSubTh(dh2,['원사(Yarn)','색상','Loss%','염색료 1 $/lb','염색료 2 $/lb'],[CSS.thDna,CSS.thDna,CSS.thDna,CSS.thDna,CSS.thDna])}
+        ${dhSubTh(dh2,['Loss%','종류','가공임$/lb'],[CSS.thEna,CSS.thEna,CSS.thEna])}
+        ${dhSubTh(dh3,['원사(Yarn)','색상','Loss%','염색료 1 $/lb','염색료 2 $/lb'],[CSS.thDna,CSS.thDna,CSS.thDna,CSS.thDna,CSS.thDna])}
+        ${dhSubTh(dh3,['Loss%','종류','가공임$/lb'],[CSS.thEna,CSS.thEna,CSS.thEna])}
+      </tr>
+    </thead>
+    <tbody>${dyeRowsHtml}</tbody>
+  </table></div>`;
+
+  table.innerHTML = `
+    <div style="font-size:10px;color:#888;margin-bottom:8px">※ 회색 = Body1 첫행 자동복사, 클릭하면 직접 입력 가능</div>
+    ${knitHtml}
+    ${dyeHtml}`;
+
+  // 원단 출고처 별도 섹션으로 렌더링 (테이블 아래)
+  const fdEl = document.getElementById('fabricDeliverySection');
+  if (fdEl) {
+    const rowLabels2 = slots.map((sl,si) => sl.g_val || `작지${si+1}`);
+    const thS2 = 'background:#1e2d52;color:#fff;padding:6px 12px;font-size:12px;font-weight:500;text-align:left;border:0.5px solid rgba(255,255,255,0.15)';
+    const tdS2 = 'padding:6px 10px;border:0.5px solid var(--color-border-tertiary,#ddd);font-size:12px;vertical-align:middle';
+    const DELIVERY_OPTS2 = `<option value="">-- 선택 --</option><option value="APPAREL LINKS, S.A.">APPAREL LINKS, S.A.</option><option value="APPAREL KCI, S.A.">APPAREL KCI, S.A.</option><option value="DEPTO. DE MUESTRAS">DEPTO. DE MUESTRAS</option><option value="GRAND APPAREL, S.A.">GRAND APPAREL, S.A.</option><option value="HANAH TRADING, S.A.">HANAH TRADING, S.A.</option><option value="INDUSTRIA ESCOGRAF, S.A.">INDUSTRIA ESCOGRAF, S.A.</option><option value="INT PLANTA">INT PLANTA</option><option value="INT, S.A.">INT, S.A.</option><option value="J S BODEGA DE TELA">J S BODEGA DE TELA</option><option value="J S INTERNATIONAL, S.A.">J S INTERNATIONAL, S.A.</option><option value="J.M. MODAS, S.A.">J.M. MODAS, S.A.</option><option value="K.V. TEXTILES, S.A.">K.V. TEXTILES, S.A.</option><option value="KL PRIMETEX GUATEMALA, S.A.">KL PRIMETEX GUATEMALA, S.A.</option><option value="MD APPAREL, S.A.">MD APPAREL, S.A.</option><option value="MFM GUATEMALA, SOCIEDAD ANONIMA">MFM GUATEMALA, SOCIEDAD ANONIMA</option><option value="MODAS YIEN HU, SOCIEDAD ANONIMA">MODAS YIEN HU, SOCIEDAD ANONIMA</option><option value="OK MODAS, SOCIEDAD ANONIMA">OK MODAS, SOCIEDAD ANONIMA</option><option value="PROBAR GARMENT">PROBAR GARMENT</option><option value="SAM SOL, S.A.">SAM SOL, S.A.</option><option value="TEST PROVEEDOR">TEST PROVEEDOR</option><option value="VICTORIA GARMENT, S.A.">VICTORIA GARMENT, S.A.</option><option value="DAAIN, S.A. (WASHING)">DAAIN, S.A. (WASHING)</option><option value="ILJO GUATEMALA, S.A.">ILJO GUATEMALA, S.A.</option><option value="JAE SUNG INTERNACIONAL TEXTILES, S.A.">JAE SUNG INTERNACIONAL TEXTILES, S.A.</option><option value="JNB II, SOCIEDAD ANONIMA">JNB II, SOCIEDAD ANONIMA</option><option value="JS PRINT GUATEMALA, S.A.">JS PRINT GUATEMALA, S.A.</option><option value="KIMS GLOBAL, SOCIEDAD ANONIMA">KIMS GLOBAL, SOCIEDAD ANONIMA</option><option value="ORANGE ETT,S.A.">ORANGE ETT,S.A.</option><option value="P&K DYEHOUSE, S.A.">P&K DYEHOUSE, S.A.</option><option value="SANGBO INTERNACIONAL, S.A. (WASHING)">SANGBO INTERNACIONAL, S.A. (WASHING)</option><option value="SM GLOBAL, SOCIEDAD ANONIMA">SM GLOBAL, SOCIEDAD ANONIMA</option><option value="W.J. GUATEMALA, S.A.">W.J. GUATEMALA, S.A.</option><option value="TEXTILES SOLAFE, S.A.">TEXTILES SOLAFE, S.A.</option><option value="C.R. TEXTIL, SOCIEDAD ANONIMA" selected>C.R. TEXTIL, SOCIEDAD ANONIMA</option><option value="CENTROTEX GUATEMALA, S.A.">CENTROTEX GUATEMALA, S.A.</option><option value="CLAROTEX GUATEMALA, S.A.">CLAROTEX GUATEMALA, S.A.</option><option value="CORPORACION ACRO, S.A.">CORPORACION ACRO, S.A.</option><option value="SANGBO INTERNACIONAL, S.A. (YARN DYEING)">SANGBO INTERNACIONAL, S.A. (YARN DYEING)</option><option value="COLOR FULL, S.A.">COLOR FULL, S.A.</option><option value="DAAIN, S.A. (YARN DYEING)">DAAIN, S.A. (YARN DYEING)</option><option value="NUEVO MUNDO TEXTIL, S.A.">NUEVO MUNDO TEXTIL, S.A.</option>`;
+    // Body1 값 기준 자동복사: fabricDelivery[0]이 있고 나머지가 비어있으면 회색으로 표시
+    const base = fabricDelivery[0] || '';
+    const rows2 = rowLabels2.map((label,si) => {
+      // 실제 값: 직접 입력한 값이 있으면 사용, 없으면 Body1 값 사용 (회색)
+      const actual = fabricDelivery[si] || '';
+      const isGray = si > 0 && actual === '' && base !== '';
+      const displayVal = isGray ? base : actual;
+      const selStyle = isGray
+        ? 'min-width:200px;border:0.5px solid #ddd;border-radius:4px;padding:5px 8px;font-size:12px;background:#f5f5f5;color:#aaa'
+        : 'min-width:200px;border:0.5px solid #bbb;border-radius:4px;padding:5px 8px;font-size:12px';
+      const opts = DELIVERY_OPTS2.replace('value="'+displayVal+'"','value="'+displayVal+'" selected');
+      return `<tr style="background:${si%2===0?'var(--color-background-primary,#fff)':'var(--color-background-secondary,#f9f9f9)'}">
+        <td style="${tdS2};font-weight:500">${esc(label)}</td>
+        <td style="${tdS2}">
+          <select style="${selStyle}" data-gray="${isGray?1:0}"
+            onfocus="if(this.dataset.gray==='1'){this.value='';this.dataset.gray='0';this.style.cssText='min-width:200px;border:0.5px solid #bbb;border-radius:4px;padding:5px 8px;font-size:12px'}"
+            onchange="fabricDelivery[${si}]=this.value;renderSec7()">
+            ${opts}
+          </select>
+        </td>
+      </tr>`;
+    }).join('');
+    fdEl.innerHTML = `
+      <div style="font-weight:600;font-size:13px;color:#2c3e6b;margin:16px 0 8px">원단 출고처 (M268~271) <span style="color:#c00;font-size:11px">★ 필수입력</span></div>
+      <div style="font-size:10px;color:#888;margin-bottom:6px">※ Body1 선택 시 나머지 자동복사, 클릭하면 직접 수정</div>
+      <table style="border-collapse:collapse">
+        <thead><tr>
+          <th style="${thS2};min-width:120px">작지</th>
+          <th style="${thS2};min-width:220px">출고처</th>
+        </tr></thead>
+        <tbody>${rows2}</tbody>
+      </table>`;
+  }
+  // X. 원사 사종/가격 섹션 동기화
+  renderYarnPrices();
+}
+function renderSummary() {
+  const file_no = document.getElementById('file_no').value.trim() || '(미입력)';
+  const buyer = gv('buyer_sel', 'buyer_txt') || '(미입력)';
+  const poList = getPoList();
+  const body = document.getElementById('summaryBody');
+  body.innerHTML = `
+    <table class="summary-table">
+      <tr><th>File #</th><td>${esc(file_no)}</td><th>Buyer</th><td>${esc(buyer)}</td></tr>
+      <tr><th>PO 수</th><td>${poList.length}개</td><th>오더 라인</th><td>${lines.length}개</td></tr>
+      <tr><th>PO # 목록</th><td colspan="3">${esc(poList.join(', ')) || '(없음)'}</td></tr>
+    </table>
+    <div style="margin-top:12px;font-size:13px;color:#555">
+      Style 정보 입력 완료: ${styleInfos.filter(si=>si.body_fabric).length} / ${styleInfos.length} 건
+    </div>
+  `;
+}
+
+// ─── ORDER RECAP LOADER ──────────────────────────────────────────────────────
+function loadOrderRecap(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  // ── EXACT ROW STRUCTURE (0-indexed) ──────────────────────────
+  // Row 1  (idx 0)  : File#    → col C (idx 2)
+  // Row 4  (idx 3)  : Sewing   → col C (idx 2)
+  // Row 17 (idx 16) : PO#      → cols C,E,G,I,K... (idx 2,4,6,8,10...)
+  // Row 18 (idx 17) : ORDER UNIT (qty)
+  // Row 19 (idx 18) : EX FACTORY DATE
+  // Row 20 (idx 19) : DELIVERY DATE
+  // Row 21 (idx 20) : STYLE#
+  // Row 22 (idx 21) : COLOR CODE
+  // Row 23 (idx 22) : COLOR NAME
+  // Fabric C1-C4 description: rows 10-13, col E (idx 4) = Body desc, col I (idx 8) = Trim desc
+  const PO_ROW    = 16;
+  const QTY_ROW   = 17;
+  const EXF_ROW   = 18;
+  const DLV_ROW   = 19;
+  const STYLE_ROW = 20;
+  const CODE_ROW  = 21;
+  const COLOR_ROW = 22;
+  const FAB_ROWS  = [10, 11, 12, 13]; // C1, C2, C3, C4
+  const PO_COLS   = [2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32]; // up to 16 POs
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:false});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      const g = (row, col) => String((data[row] || [])[col] || '').trim();
+      const gn = (row, col) => { const n = parseFloat(String((data[row]||[])[col]||'').replace(/,/g,'')); return isNaN(n)?0:n; };
+
+      // ── File# validate ───────────────────────────────────────
+      const recapFileNo = g(0, 2); // C1
+      const currentFileNo = document.getElementById('file_no').value.trim();
+      if (currentFileNo && recapFileNo && currentFileNo !== recapFileNo) {
+        showAlert('warn', `⚠ File# 불일치: 입력된 "${currentFileNo}" ≠ 오더리캡 "${recapFileNo}"`);
+        return;
+      }
+      if (recapFileNo) document.getElementById('file_no').value = recapFileNo;
+
+      // ── Factory (C4) ─────────────────────────────────────────
+      const factory = g(3, 2);
+      if (factory) setFactory1(factory);
+
+      // ── Fabric combinations ───────────────────────────────────
+      // V3 structure:
+      //   A(col0)=label(C1/C2/C3)  B(col1)=fabric code  D(col3)=fiber content
+      //   G(col6)=body type  H(col7)=oz  I(col8)=(GSM)
+      //   K(col10)=trim fiber  N(col13)=trim type  O(col14)=trim oz  P(col15)=trim (GSM)
+      const fabMap = {};
+      FAB_ROWS.forEach((r, i) => {
+        const label       = g(r, 0);   // A: "C1","C2","C3"
+        const fabCode     = g(r, 1);   // B: "600106" etc.
+        const bodyFiber   = g(r, 3);   // D: "60% COTTON 40% POLYESTER"
+        const bodyType    = g(r, 6);   // G: "JERSEY"
+        const bodyGsmRaw  = g(r, 8);   // I: "(229GSM)"
+        const trimFiber   = g(r, 10);  // K: trim fiber content
+        const trimType    = g(r, 13);  // N: "RIB"
+        const trimGsmRaw  = g(r, 15);  // P: "(303GSM)"
+
+        const bodyGsmM = bodyGsmRaw.match(/(\d+)/);
+        const trimGsmM = trimGsmRaw.match(/(\d+)/);
+        const bodyGsm  = bodyGsmM ? parseInt(bodyGsmM[1]) : '';
+        const trimGsm  = trimGsmM ? parseInt(trimGsmM[1]) : '';
+
+        // Full label: "C1(600106) 60% COTTON 40% POLYESTER JERSEY (229GSM)"
+        const codeStr  = fabCode ? `(${fabCode}) ` : '';
+        const bodyFull = label
+          ? `${label} ${codeStr}${bodyFiber ? bodyFiber + ' ' : ''}${bodyType}${bodyGsm ? ' ('+bodyGsm+'GSM)' : ''}`.trim()
+          : '';
+        const trimFull = label
+          ? `${label} ${codeStr}${trimFiber ? trimFiber + ' ' : ''}${trimType}${trimGsm ? ' ('+trimGsm+'GSM)' : ''}`.trim()
+          : '';
+
+        fabMap['C'+(i+1)] = {
+          body_name:   label && bodyType ? `${label} ${bodyFiber} ${bodyType}` : '',
+          body_weight: bodyGsm,
+          body_type:   bodyType,
+          body_fiber:  bodyFiber,   // e.g. "60% COTTON 40% POLYESTER" — for H→J mapping
+          body_full:   bodyFull,
+          trim_name:   label && trimType ? `${label} ${trimFiber||''} ${trimType}`.trim() : '',
+          trim_weight: trimGsm,
+          trim_type:   trimType,
+          trim_fiber:  trimFiber,   // e.g. "60% COTTON 40% POLYESTER"
+          trim_full:   trimFull
+        };
+      });
+
+      // ── PO loop ──────────────────────────────────────────────
+      const newLines = [];
+      const poList   = [];
+
+      PO_COLS.forEach(c => {
+        const po = g(PO_ROW, c);
+        if (!po || po.length < 5) return;
+
+        poList.push(po);
+
+        const style_no   = g(STYLE_ROW, c);
+        const color_code = g(CODE_ROW,  c);
+        const color      = g(COLOR_ROW, c);
+        const qty        = gn(QTY_ROW,  c);
+
+        // U/Price = Σ(pcs × fob_unit) / ORDER UNIT
+        // PCS col = c, FOB col = c+1, size rows 30-45 (0-indexed: 29-44)
+        let weightedAmt = 0;
+        for (let r = 29; r <= 44; r++) {
+          const sQty = gn(r, c);
+          const sFob = gn(r, c + 1);
+          if (sQty > 0 && sFob > 0) weightedAmt += sQty * sFob;
+        }
+        const unitPrice = qty > 0 && weightedAmt > 0 ? Math.round(weightedAmt / qty * 10000) / 10000 : 0;
+
+        // Fabric from row 24 (0-indexed: 23)
+        const fabKey = g(23, c) || 'C1';
+        const fab = fabMap[fabKey] || fabMap['C1'] || {};
+
+        newLines.push({
+          po_no: po, style_no, color_code, color,
+          qty, price: unitPrice,
+          contrast_color: 'N/A',
+          fabric_code: fabKey,
+          body_fabric: fab.body_name   || '',
+          body_weight: fab.body_weight || '',
+          body_width:  '',
+          acc_fabric:  fab.trim_name   || '',
+          acc_weight:  fab.trim_weight || '',
+          acc_width:   ''
+        });
+      });
+
+      // ── Dates: EX FACTORY (first) and DELIVERY (last) ────────
+      const exfVals = PO_COLS.map(c => toDateSerial(gn(EXF_ROW, c) || g(EXF_ROW, c))).filter(Boolean);
+      const dlvVals = PO_COLS.map(c => toDateSerial(gn(DLV_ROW, c) || g(DLV_ROW, c))).filter(Boolean);
+      if (exfVals.length) setDate('delivery_first', serialToIso(Math.min(...exfVals)));
+      if (dlvVals.length) setDate('delivery_last',  serialToIso(Math.max(...dlvVals)));
+
+      // ── PO grid ──────────────────────────────────────────────
+      setPoGrid(poList);
+
+      // ── Rebuild lines ─────────────────────────────────────────
+      lines = []; styleInfos = [];
+      newLines.forEach(l => addLine(l));
+
+      // ── 작지별 원단 구성 초기화 ──────────────────────────────────
+      // Build J dropdown options from recap: C1 JERSEY, C2 JERSEY, C1 1X1 RIB...
+      jOptionsFromRecap = [];
+      // hFiberToJ: maps normalized fiber keyword → {j_val, label}
+      // e.g. "100% cotton" → {j_val:'SINGLE JERSEY 2', label:'C2 JERSEY'}
+      hFiberToJ = {};
+      hFiberToJBody = {};
+      hFiberToJTrim = {};
+
+      ['C1','C2','C3','C4'].forEach(key => {
+        const fab = fabMap[key];
+        if (!fab || !fab.body_name) return;
+
+        // Body: FULL name = "C1 60% COTTON 40% POLYESTER JERSEY" — matches Excel J column list exactly
+        const bodyFiberUp = (fab.body_fiber || '').toUpperCase().trim();
+        const bodyTypeUp  = (fab.body_type  || 'JERSEY').toUpperCase().trim();
+        const bodyLabel   = `${key} ${bodyFiberUp} ${bodyTypeUp}`.trim();
+        jOptionsFromRecap.push({ label: bodyLabel, j_val: bodyLabel });
+
+        // Fiber → J auto-match maps
+        if (fab.body_fiber) {
+          const fiberKey = fab.body_fiber.toLowerCase().trim();
+          hFiberToJBody[fiberKey] = { j_val: bodyLabel, label: bodyLabel };
+          hFiberToJ[fiberKey]     = { j_val: bodyLabel, label: bodyLabel };
+        }
+
+        // Trim: FULL name = "C1 60% COTTON 40% POLYESTER 1X1 RIB"
+        if (fab.trim_name) {
+          const trimFiberUp = (fab.trim_fiber || fab.body_fiber || '').toUpperCase().trim();
+          const trimTypeUp  = (fab.trim_type  || '1X1 RIB').toUpperCase().trim();
+          const trimLabel   = `${key} ${trimFiberUp} ${trimTypeUp}`.trim();
+          jOptionsFromRecap.push({ label: trimLabel, j_val: trimLabel });
+          if (fab.trim_fiber || fab.body_fiber) {
+            const trimFiberKey = (fab.trim_fiber || fab.body_fiber).toLowerCase().trim();
+            hFiberToJTrim[trimFiberKey] = { j_val: trimLabel, label: trimLabel };
+          }
+        }
+      });
+
+      // Build recap summary for top panel
+      recapFabSummary = ['C1','C2','C3','C4'].map(key => {
+        const fab = fabMap[key];
+        if (!fab || !fab.body_name) return null;
+        let lines = [];
+        if (fab.body_full) lines.push(`Body: ${fab.body_full}`);
+        if (fab.trim_full) lines.push(`Trim: ${fab.trim_full}`);
+        return lines.length ? `<strong>${key}</strong>: ${lines.join(' | ')}` : null;
+      }).filter(Boolean).join('<br>');
+
+      // Reset slots
+      const emptyYarns = () => [
+        {h_sel:'', h_custom:'', j_val:'', m_val:'개폭(Open)'},
+        {h_sel:'', h_custom:'', j_val:'', m_val:'개폭(Open)'},
+        {h_sel:'', h_custom:'', j_val:'', m_val:'개폭(Open)'}
+      ];
+      slots = [1,2,3,4].map(() => ({ g_val: '', yarns: emptyYarns() }));
+
+      // ── 스마트 슬롯 자동배정 ──────────────────────────────────────────────
+      // 1) fabric code별 컬러 수 집계 → 가장 많은 fc = 단일원단(Body1/Rib1)
+      //    나머지 fc들 = 복합원단(Body2/Rib2 — 여러 yarn 항목)
+      const fcLineCount = {};
+      newLines.forEach(l => {
+        const fc = (l.fabric_code || 'C1').trim();
+        fcLineCount[fc] = (fcLineCount[fc] || 0) + 1;
+      });
+      const fcsSorted = Object.keys(fcLineCount).sort((a, b) => fcLineCount[b] - fcLineCount[a]);
+      const primaryFc   = fcsSorted[0] || 'C1';
+      const secondaryFcs = fcsSorted.slice(1); // 복합원단 fc들
+
+      // 2) j_val에서 h_sel 자동 추론
+      function inferH(jVal) {
+        const j = (jVal || '').toUpperCase();
+        if (j.includes('100%') && j.includes('COTTON') && !j.includes('40%') && !j.includes('10%'))
+          return '100% Cotton, 16/1 KPOE';
+        if (j.includes('60%') && j.includes('40%'))
+          return j.includes('26/1') ? '60% Cotton 40% Polyester, 26/1 MVS' : '60% Cotton 40% Polyester, 16/1 KPOE';
+        if (j.includes('90%') && j.includes('10%'))
+          return '90% Cotton 10% Polyester, 16/1 KPOE';
+        return '';
+      }
+
+      // 3) fc + body/trim 타입으로 j option 검색
+      function findJOpt(fc, type) {
+        return jOptionsFromRecap.find(o =>
+          o.j_val.startsWith(fc + ' ') && o.j_val.toUpperCase().includes(type)
+        ) || null;
+      }
+
+      // 4) Slot 0 (Body1) = 주력 fc JERSEY
+      const body1Opt = findJOpt(primaryFc, 'JERSEY') || jOptionsFromRecap[0];
+      if (body1Opt) {
+        slots[0].g_val = 'Body1';
+        slots[0].yarns[0].j_val = body1Opt.j_val;
+        slots[0].yarns[0].h_sel = inferH(body1Opt.j_val);
+      }
+
+      // 5) Slot 1 (Rib1) = 주력 fc RIB
+      const rib1Opt = findJOpt(primaryFc, 'RIB');
+      if (rib1Opt) {
+        slots[1].g_val = 'Rib1';
+        slots[1].yarns[0].j_val = rib1Opt.j_val;
+        slots[1].yarns[0].h_sel = inferH(rib1Opt.j_val);
+      }
+
+      // 6) Slot 2 (Body2) = 보조 fc들 각각 yarn 항목으로
+      if (secondaryFcs.length > 0) {
+        slots[2].g_val = 'Body2';
+        secondaryFcs.forEach((fc, yi) => {
+          if (yi >= 3) return;
+          const opt = findJOpt(fc, 'JERSEY');
+          if (opt) {
+            slots[2].yarns[yi].j_val = opt.j_val;
+            slots[2].yarns[yi].h_sel = inferH(opt.j_val);
+          }
+        });
+      }
+
+      // 7) Slot 3 (Rib2) = 보조 fc들 각각 yarn 항목으로
+      if (secondaryFcs.length > 0) {
+        slots[3].g_val = 'Rib2';
+        secondaryFcs.forEach((fc, yi) => {
+          if (yi >= 3) return;
+          const opt = findJOpt(fc, 'RIB');
+          if (opt) {
+            slots[3].yarns[yi].j_val = opt.j_val;
+            slots[3].yarns[yi].h_sel = inferH(opt.j_val);
+          }
+        });
+      }
+
+      showAlert('info', `✅ 로드 완료: File# ${recapFileNo}, ${newLines.length}개 라인`);
+
+    } catch(err) {
+      showAlert('warn', '오류: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function getCellVal(data, row, col) {
+  return data[row] && data[row][col] !== undefined ? data[row][col] : '';
+}
+
+function parseNum(v) {
+  const n = parseFloat(String(v || '').replace(/,/g,''));
+  return isNaN(n) ? 0 : n;
+}
+
+function parseFabricDesc(desc) {
+  // Extract weight (e.g. "230GSM" or "6.75oz") and width from description
+  const weightMatch = desc.match(/(\d+)\s*GSM/i);
+  const ozMatch = desc.match(/([\d.]+)\s*oz/i);
+  const widthMatch = desc.match(/([\d.]+)\s*(?:inch|")/i);
+
+  const weight = weightMatch ? parseInt(weightMatch[1]) : (ozMatch ? Math.round(parseFloat(ozMatch[1]) * 33.906) : '');
+  const width  = widthMatch ? parseFloat(widthMatch[1]) : '';
+
+  // Strip weight/width from name
+  let name = desc.replace(/,?\s*[\d.]+\s*oz\s*\(?\d*\s*GSM\)?/i, '')
+                 .replace(/,?\s*\d+\s*GSM/i, '')
+                 .replace(/,?\s*[\d.]+"/i, '').trim();
+
+  return { name: name || desc, weight, width };
+}
+
+function toDateSerial(v) {
+  if (!v) return null;
+  if (typeof v === 'number' && v > 40000) return v; // already serial
+  if (typeof v === 'string') {
+    const m = v.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+      const d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+      const base = new Date(1899, 11, 30);
+      return Math.round((d - base) / 86400000);
+    }
+  }
+  return null;
+}
+
+
+function serialToIso(serial) {
+  if (!serial) return '';
+  const d = new Date(1899, 11, 30);
+  d.setDate(d.getDate() + serial);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function setFactory1(val) {
+  const sel = document.getElementById('fac1_sel');
+  const txt = document.getElementById('fac1_txt');
+  const normalized = val.replace(/\s*,\s*/g, ',').toUpperCase();
+  let found = false;
+  for (const opt of sel.options) {
+    if (opt.value !== '__direct__' &&
+        opt.value.replace(/\s*,\s*/g, ',').toUpperCase() === normalized) {
+      sel.value = opt.value;
+      txt.classList.add('hidden');
+      found = true; break;
+    }
+  }
+  if (!found) {
+    sel.value = '__direct__';
+    txt.classList.remove('hidden');
+    txt.value = val;
+  }
+}
+
+function showAlert(type, msg) {
+  const el = document.getElementById('recapAlert');
+  el.className = `alert alert-${type === 'warn' ? 'warn' : 'info'}`;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 8000);
+}
+
+// ─── BUILD PAYLOAD & GENERATE ────────────────────────────────────────────────
+function buildPayload() {
+  // dyeRows 초기화 보장 (Tab 4 미방문 또는 새로고침 케이스)
+  if (!dyeRows.some(s => s && s.length > 0)) {
+    loadDyeRows();
+    if (!dyeRows.some(s => s && s.length > 0)) {
+      slots.forEach((sl, si) => {
+        const filtered = sl.yarns.filter(yn => getH(yn));
+        dyeRows[si] = filtered.map((yn, yi) => {
+          const ex = dyeRows[si] && dyeRows[si][yi];
+          return ex || {yarn:getH(yn),color:'DK',loss_dye:'',fee_dye1:'',fee_dye2:'',loss_ext:'',ext_type:'',fee_ext:''};
+        });
+      });
+    }
+  }
+  const basic = {
+    file_no:        document.getElementById('file_no').value.trim(),
+    date:           document.getElementById('date').value,
+    buyer:          gv('buyer_sel', 'buyer_txt'),
+    price_terms:    document.getElementById('price_terms').value.trim(),
+    factory1:       gv('fac1_sel', 'fac1_txt'),
+    factory2:       gv('fac2_sel', 'fac2_txt'),
+    delivery_first: document.getElementById('delivery_first').value,
+    delivery_last:  document.getElementById('dlast_na').checked ? null : document.getElementById('delivery_last').value,
+    author:         document.getElementById('author').value.trim(),
+    dept:           document.getElementById('dept').value,
+    yarn_dye:       document.getElementById('yarn_dye').value,
+    fabric_days:    document.getElementById('fabric_days').value || null,
+    fabric_date1:   document.getElementById('fabric_date1').value || null,
+    fabric_date2:   document.getElementById('fd2_na').checked ? null : document.getElementById('fabric_date2').value,
+    fabric_date3:   document.getElementById('fd3_na').checked ? null : document.getElementById('fabric_date3').value,
+    fabric_date4:   document.getElementById('fd4_na').checked ? null : document.getElementById('fabric_date4').value,
+    company1:       document.getElementById('company1').value.trim(),
+    company2:       document.getElementById('company2').value.trim(),
+    company3:       document.getElementById('company3').value.trim(),
+    company4:       document.getElementById('company4').value.trim(),
+  };
+
+  // lines array is already the source of truth — no DOM reading needed
+  const linesOut = lines.map(l => ({
+    file_no:        basic.file_no,
+    po_no:          l.po_no,
+    style_no:       l.style_no,
+    color_code:     l.color_code,
+    color:          l.color,
+    qty:            parseFloat(l.qty) || 0,
+    price:          parseFloat(l.price) || 0,
+    contrast_color: l.contrast_color || 'N/A',
+    fabric_code:    l.fabric_code || ''
+  }));
+
+  const sec7 = {
+    knitter1:   sel_knitter1,
+    knitter2:   sel_knitter2,
+    knitter3:   sel_knitter3,
+    dyehouse:   sel_dyehouse,
+    dyehouse2:  sel_dyehouse2,
+    dyehouse3:  sel_dyehouse3,
+    fin1_co:    document.getElementById('s7_fin1_co').value,
+    fin1_method:document.getElementById('s7_fin1_method').value.trim(),
+    fin2_co:    document.getElementById('s7_fin2_co').value,
+    fin2_method:document.getElementById('s7_fin2_method').value.trim(),
+    rows: sec7rows.map((r, i) => {
+      function rv(f) { const v=r[f]; return v!==''?v:(sec7rows[0][f]||''); }
+      function pct(f) { const v=rv(f); return v!==''?parseFloat(v)/100:null; }
+      function num(f) { const v=rv(f); return v!==''?parseFloat(v):null; }
+      // 염색 데이터: dyeRows[i][0] 기준 (slot 첫번째 yarn)
+      const dr0 = (dyeRows[i]&&dyeRows[i][0])||{};
+      const dr00 = (dyeRows[0]&&dyeRows[0][0])||{};
+      function drv(f) { return dr0[f]!==''&&dr0[f]!==undefined?dr0[f]:(dr00[f]||''); }
+      function dpct(f) { const v=drv(f); return v!==''?parseFloat(v)/100:null; }
+      function dnum(f) { const v=drv(f); return v!==''?parseFloat(v):null; }
+      return {
+        loss_knit:  pct('loss_knit'),  fee_knit:  num('fee_knit'),
+        loss_knit2: pct('loss_knit2'), fee_knit2: num('fee_knit2'),
+        loss_knit3: pct('loss_knit3'), fee_knit3: num('fee_knit3'),
+        loss_dye:   dpct('loss_dye'),
+        loss_ext:   dpct('loss_ext'),  ext_type: drv('ext_type'), fee_ext: dnum('fee_ext'),
+      };
+    }),
+    // 염색료: dyeRows에서 추출 (slot×yarn → CG/CJ)
+    // gray 행(state='')도 화면에 표시된 값을 전송 — 원사 타입별 명시값 우선, 없으면 Body1 fallback
+    dye_row_data: (function() {
+      const ref00 = dyeRows[0] && dyeRows[0][0] ? dyeRows[0][0] : {};
+      const yarnExplicitFee = {};
+      dyeRows.forEach((slotYarns, si) => {
+        const yf = (slots[si]?.yarns||[]).map(y=>getH(y)).filter(Boolean);
+        (slotYarns||[]).forEach((yr, yi) => {
+          const yn = yr.yarn || yf[yi] || '';
+          if (!yn) return;
+          if (yr.fee_dye1 !== '' && yr.fee_dye1 !== undefined && !(yn in yarnExplicitFee))
+            yarnExplicitFee[yn] = {fee_dye1: yr.fee_dye1, fee_dye2: yr.fee_dye2||''};
+        });
+      });
+      function effectiveFee(field, yr, yn) {
+        const v = yr[field];
+        if (v !== '' && v !== undefined) return parseFloat(v)||null;
+        const ex = yarnExplicitFee[yn];
+        if (ex && ex[field] !== '') return parseFloat(ex[field])||null;
+        const rv = ref00[field];
+        return (rv !== '' && rv !== undefined) ? parseFloat(rv)||null : null;
+      }
+      return dyeRows.map((slotYarns, si) => {
+        const yf2 = (slots[si]?.yarns||[]).map(y=>getH(y)).filter(Boolean);
+        return (slotYarns||[]).map((yr, yi) => {
+          const yn = yr.yarn || yf2[yi] || '';
+          return { yarn:yn, color:yr.color,
+            fee_dye1: effectiveFee('fee_dye1', yr, yn),
+            fee_dye2: effectiveFee('fee_dye2', yr, yn) };
+        });
+      });
+    })(),
+
+  };
+  return { basic, lines: linesOut, style_infos: styleInfos, jaji_list: getJajiList(), sec7,
+           fabric_delivery: fabricDelivery.map((v,i) => v || (i>0 ? fabricDelivery[0] : '')),
+           yarn_price_data: yarnPriceData.map(d => ({
+             yarn_type:  d.yarn_type,
+             full_name:  d.full_name || '',
+             price:      d.price !== '' ? parseFloat(d.price) || null : null
+           })),
+           cost_params: {
+             general_pct:    costParams.general_pct    !== '' ? parseFloat(costParams.general_pct)    : null,
+             commission_pct: costParams.commission_pct !== '' ? parseFloat(costParams.commission_pct) : null,
+             freight:        costParams.freight        !== '' ? parseFloat(costParams.freight)        : null,
+             test_fee:       costParams.test_fee       !== '' ? parseFloat(costParams.test_fee)       : null,
+             duty:           costParams.duty           !== '' ? parseFloat(costParams.duty)           : null,
+             extra1:         costParams.extra1         !== '' ? parseFloat(costParams.extra1)         : null,
+           }
+         };
+}
+
+async function debugCJ() {
+  const el = document.getElementById('cjDebugResult');
+  el.style.display = 'block';
+  el.textContent = '진단 중...';
+  try {
+    // 로컬 상태 먼저 표시
+    let localOut = '=== [LOCAL] dyeRows 상태:\n';
+    if (!dyeRows || dyeRows.length === 0) {
+      localOut += '  dyeRows = [] (비어있음!)\n';
+    } else {
+      dyeRows.forEach((sr, si) => {
+        localOut += `  slot${si}: ${JSON.stringify(sr)}\n`;
+      });
+    }
+    localOut += '\n=== [LOCAL] slots 원사 (h_sel):\n';
+    slots.forEach((sl, si) => {
+      const yarns = sl.yarns.map(y => y.h_sel || '(없음)');
+      localOut += `  slot${si} g=${sl.g_val}: ${JSON.stringify(yarns)}\n`;
+    });
+    localOut += '\n=== [LOCAL] localStorage oc_dyeRows:\n';
+    try {
+      const ls = localStorage.getItem('oc_dyeRows');
+      localOut += ls ? ls.substring(0, 300) + '\n' : '(없음)\n';
+    } catch(e) { localOut += '(접근 불가)\n'; }
+    el.textContent = localOut + '\n서버 전송 중...';
+
+    const payload = buildPayload();
+    const resp = await fetch('https://order-card-backend.onrender.com/api/debug_cj', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await resp.json();
+    let out = localOut + '\n';
+    out += '=== [SERVER] dh1: ' + d.dh1 + '\n';
+    out += '=== [SERVER] cg_yarn_list: ' + JSON.stringify(d.cg_yarn_list) + '\n\n';
+    out += '=== [SERVER] dye_row_data 전송값:\n';
+    (d.dye_row_data_received||[]).forEach((slot, si) => {
+      out += `  slot${si}: ` + JSON.stringify(slot) + '\n';
+    });
+    out += '\n=== yarn_dh_fee:\n' + JSON.stringify(d.yarn_dh_fee, null, 2) + '\n';
+    out += '\n=== CJ 결과:\n' + JSON.stringify(d.cj_result, null, 2);
+    el.textContent = out;
+  } catch(e) {
+    el.textContent = '오류: ' + e.message;
+  }
+}
+
+async function generate() {
+  // Generate 직전: 포커스된 input의 값을 dyeRows에 강제 저장 (onchange 미발동 방어)
+  document.querySelectorAll('#sec7 input[type="text"]').forEach(el => {
+    if (el.value !== '' && el.getAttribute('oninput')) {
+      try { eval(el.getAttribute('oninput').replace('this.', 'el.')); } catch(e) {}
+    }
+  });
+  const status = document.getElementById('genStatus');
+  status.textContent = '⏳ 생성 중...';
+  try {
+    const payload = buildPayload();
+    const res = await fetch('https://order-card-backend.onrender.com/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('서버 오류 ' + res.status);
+    const blob = await res.blob();
+    const fn = payload.basic.file_no
+      ? `OrderCard_${payload.basic.file_no.replace(/\//g,'-')}.xlsm`
+      : 'OrderCard.xlsm';
+    const url = URL.createObjectURL(new Blob([blob], {type:'application/vnd.ms-excel.sheet.macroEnabled.12'}));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fn;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+    status.textContent = '✅ 다운로드 완료: ' + fn;
+  } catch(e) {
+    status.textContent = '❌ 오류: ' + e.message;
+    console.error(e);
+  }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+(function init() {
+  buildPoGrid();
+  // Set today's date
+  const today = new Date();
+  const iso = today.toISOString().slice(0,10);
+  document.getElementById('date').value = iso;
+  const fd1 = document.getElementById('fabric_date1');
+  if (fd1 && !fd1.value) fd1.value = iso;
+})();
+</script>
+</body>
+</html>
